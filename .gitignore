@@ -4,3 +4,5 @@ __pycache__/
 ckp/
 
 
+.streamlit/
+.ipynb_checkpoints
