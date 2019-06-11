@@ -1,3 +1,8 @@
+import errno
+import imageio
+import scipy
+import PIL.Image as Image
+
 from torch.utils.data import Dataset
 import torchvision.datasets as ds
 import torchvision.transforms as transforms
@@ -87,6 +92,81 @@ class CocoMask(VisionDataset):
     def test(self):
         return
 
+
+def _create_img_ids(img_dir):
+    '''create ids for each raw HD imgs'''
+    img_ids = []
+    for x in os.listdir(img_dir):
+        img_ids = img_ids + os.listdir(
+                os.path.join(img_dir, x))
+    return img_ids
+
+def preprocess_imgs(img_dir, out_dir):
+    '''divide raw HD images (1250x1250) into subimgs of dim 250 x 250
+    Only keep rgb channels
+    Args:
+        img_dir: root dir of raw images 
+        out_dir: root dir for preprocessed imgs and masks
+
+    Return: of subimgs and submasks in the following structure
+    
+    Trees_processed 
+        imgs
+        masks
+    '''
+
+    if not os.path.isdir(out_dir):
+        try:
+            os.makedirs(os.path.join(out_dir, 'imgs/'))
+            os.makedirs(os.path.join(out_dir, 'masks/'))
+        except OSError as e:
+            print(e)
+
+    
+
+    img_ids = _create_img_ids(img_dir)
+    
+    num = 1250 // 250
+    for img_id in img_ids:
+        # img sub-folder
+        img_sfd = img_id.split('-')[0]
+        img_rgb = img_id + "_RGB-Ir.tif"
+        img_mask = img_id + "_TREE.png"
+        
+        img_path = os.path.join(img_dir, 
+                img_sfd, img_id, img_rgb)
+
+        mask_path = os.path.join(img_dir,
+                img_sfd, img_id, img_mask)
+
+        img = io.imread(img_path)
+        mask = io.imread(mask_path)
+        
+        # divid into subimgs and save 
+        for i in range(num):
+            for j in range(num):
+                start_x, end_x = i*250, (i+1)*250
+                start_y, end_y = j*250, (j+1)*250
+                
+                sub_img = img[start_x:end_x, start_y:end_y,0:3]
+                sub_mask = mask[start_x:end_x, start_y:end_y,:]
+                
+                idx = '{0}_{0}'.format(i,j)
+                file_name = img_id + '_' + idx + ".png"
+
+                # save img
+                Image.fromarray(sub_img).save(
+                        os.path.join(out_dir, 'imgs/', file_name)
+                        )
+
+                # save mask
+                Image.fromarray(sub_mask).save(
+                        os.path.join(out_dir, 'masks/', file_name)
+                        )
+
+
+        
+
 class TreeDataset(Dataset):
     #TODO divid each img into 5 x 5 subimages
     # each of which has dimension 250 x 250 
@@ -145,11 +225,8 @@ class TreeDataset(Dataset):
 
 if __name__=='__main__':
     img_dir = '/home/hongshan/data/Trees'
-    ds = TreeDataset(img_dir)
-    img, mask = ds[0]
+    out_dir = '/home/hongshan/data/Trees_processed'
+    preprocess_imgs(img_dir, out_dir)
 
-    st.image(img[:,:,:3])
-
-    st.image(mask[:,:,:4])
 
 
