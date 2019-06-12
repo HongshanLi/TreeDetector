@@ -2,6 +2,13 @@ import torch
 import torch.nn as nn
 import torchvision.models as models
 
+class ElvFE(nn.Module):
+    '''Convnet to extract elevation features'''
+    def __init__(self):
+        super(ElvFE, self).__init__()
+        pass
+
+
 class ResNetFE(nn.Module):
     '''Resnet backbone for feature extraction'''
     def __init__(self, pretrained=True):
@@ -29,15 +36,21 @@ class Mask(nn.Module):
         torch.manual_seed(8128)
         self.module_list = nn.ModuleList()
         for i in range(0, 5):
+            if i <= 3:
+                padding = 0
+            else: 
+                padding = 3
+
             in_channels = 2048 // (2**i)
             out_channels = 2048 // (2**(i+1))
             module = nn.Sequential()
             deconv = nn.ConvTranspose2d(
-                in_channels, out_channels, kernel_size=3,
-                stride=2, padding=0)
+                in_channels, out_channels, kernel_size=2,
+                stride=2, padding=padding)
             module.add_module('deconv_{0}'.format(i+1), deconv)
             self.module_list.append(module)
 
+    
 
     def forward(self, x):
         for module in self.module_list:

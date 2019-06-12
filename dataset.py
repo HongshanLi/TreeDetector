@@ -193,62 +193,78 @@ class TreeDataset(Dataset):
     #TODO divid each img into 5 x 5 subimages
     # each of which has dimension 250 x 250 
 
-    def __init__(self, img_dir, train=True):
-        # get a list of img ids
-        self.img_dir = img_dir
-        self.img_ids = self.create_img_ids()
+    def __init__(self, proc_dir, purpose='train'):
+        # get a list of img files
+        self.proc_dir = proc_dir
+        self.file_names = self.get_file_names()
 
         # choose the same 90% imgs for training
         np.random.seed(42)
-        total_size = len(self.img_ids)
-        is_train = np.random.binomial(size=total_size, n=1, p=0.9)
-        
-        train_ids = []
-        val_ids = []
-        for i, b in enumerate(is_train):
-            if b == 1:
-                train_ids.append(self.img_ids[i])
-            else:
-                val_ids.append(self.img_ids[i])
+        total_size = len(self.file_names)
+        train_size = int(total_size * 0.8)
+        val_size = int(total_size * 0.1)
+        test_size = int(total_size * 0.1)
 
-        if train:
-            self.img_ids = train_ids
+        dist = []
+        for i in range(total_size):
+            if i < train_size:
+                dist.append(0)
+            elif i>= 1 and i <train_size + val_size:
+                dist.append(1)
+            elif i>= train_size + val_size and i < total_size:
+                dist.append(2)
+
+        train_set = []
+        val_set = []
+        test_set = []
+        for i, b in enumerate(dist):
+            if b == 0:
+                train_set.append(self.file_names[i])
+            elif b==1:
+                val_set.append(self.file_names[i])
+            elif b==2:
+                test_set.append(self.file_names[i])
+
+        if purpose=='train':
+            self.file_names = train_set
+        elif purpose=='val':
+            self.file_names = val_set
+        elif purpose=='test':
+            self.file_names = test_set
         else:
-            self.img_ids = test_ids
+            print("purpose must be 'train', 'val' or 'test'")
 
     def __len__(self):
-        return len(self.img_ids)
+        return len(self.file_names)
 
     def __getitem__(self, idx):
         # img subfolder
-        img_id = self.img_ids[idx]
+        file_name = self.file_names[idx]
 
-        img_sfd = img_id.split('-')[0]
-        img_rgb = img_id + "_RGB-Ir.tif"
-        img_mask = img_id + "_TREE.png"
-        
-        img_path = os.path.join(self.img_dir, img_sfd, img_id, img_rgb)
-        mask_path = os.path.join(self.img_dir, img_sfd, img_id, img_mask)
+        img = os.path.join(self.proc_dir, 'imgs/', file_name)
+        elv = os.path.join(self.proc_dir, 'elevations/', file_name)
+        mask = os.path.join(self.proc_dir, 'masks/', file_name)
 
-        img = io.imread(img_path)
-        mask = io.imread(mask_path)
-        return img, mask
+        img = io.imread(img)
+        elv = io.imread(elv)
+        mask = io.imread(mask)
+        return img, elv, mask
+    
+    def get_file_names(self):
+        file_names = os.listdir(os.path.join(
+            self.proc_dir, 'imgs'))
+        return file_names
 
-
-    def create_img_ids(self):
-        '''create imgids based on their directory names'''
-        img_ids = []
-        for x in os.listdir(self.img_dir):
-            img_ids = img_ids + os.listdir(
-                    os.path.join(self.img_dir, x))
-        return img_ids
-
-        
 
 if __name__=='__main__':
     img_dir = '/home/hongshan/data/Trees'
     out_dir = '/home/hongshan/data/Trees_processed'
-    preprocess_imgs(img_dir, out_dir)
+    d = TreeDataset(out_dir)
+    for i in range(10):
+        x,y,z = d[i]
+        st.image(x)
+        st.image(y)
+        st.image(z)
 
 
 
