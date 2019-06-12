@@ -149,9 +149,9 @@ def preprocess_imgs(img_dir, out_dir):
                 start_y, end_y = j*250, (j+1)*250
                 
                 sub_img = img[start_x:end_x, start_y:end_y,0:3]
-                sub_mask = mask[start_x:end_x, start_y:end_y,:]
+                sub_mask = mask[start_x:end_x, start_y:end_y,0:3]
                 
-                idx = '{0}_{0}'.format(i,j)
+                idx = '{}_{}'.format(i,j)
                 file_name = img_id + '_' + idx + ".png"
 
                 # save img
@@ -163,6 +163,7 @@ def preprocess_imgs(img_dir, out_dir):
                 Image.fromarray(sub_mask).save(
                         os.path.join(out_dir, 'masks/', file_name)
                         )
+        print("Num of imgs processed:", len(img_ids))
 
 
         
