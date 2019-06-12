@@ -118,6 +118,7 @@ def preprocess_imgs(img_dir, out_dir):
     if not os.path.isdir(out_dir):
         try:
             os.makedirs(os.path.join(out_dir, 'imgs/'))
+            os.makedirs(os.path.join(out_dir, 'elevations/'))
             os.makedirs(os.path.join(out_dir, 'masks/'))
         except OSError as e:
             print(e)
@@ -127,19 +128,30 @@ def preprocess_imgs(img_dir, out_dir):
     img_ids = _create_img_ids(img_dir)
     
     num = 1250 // 250
-    for img_id in img_ids:
+    for img_id in img_ids[0:1]:
         # img sub-folder
         img_sfd = img_id.split('-')[0]
+
+        # rgb
         img_rgb = img_id + "_RGB-Ir.tif"
+        
+        # elvation img
+        img_elv = img_id + "_DSM.tif"
+        
+        # mask
         img_mask = img_id + "_TREE.png"
         
         img_path = os.path.join(img_dir, 
                 img_sfd, img_id, img_rgb)
 
+        elv_path = os.path.join(img_dir,
+                img_sfd, img_id, img_elv)
+
         mask_path = os.path.join(img_dir,
                 img_sfd, img_id, img_mask)
 
         img = io.imread(img_path)
+        elv = io.imread(elv_path)
         mask = io.imread(mask_path)
         
         # divid into subimgs and save 
@@ -149,6 +161,10 @@ def preprocess_imgs(img_dir, out_dir):
                 start_y, end_y = j*250, (j+1)*250
                 
                 sub_img = img[start_x:end_x, start_y:end_y,0:3]
+
+                # elv img only has one channel
+                sub_elv = img[start_x:end_x, start_y:end_y]
+
                 sub_mask = mask[start_x:end_x, start_y:end_y,0:3]
                 
                 idx = '{}_{}'.format(i,j)
@@ -159,11 +175,16 @@ def preprocess_imgs(img_dir, out_dir):
                         os.path.join(out_dir, 'imgs/', file_name)
                         )
 
+                # save elv
+                Image.fromarray(sub_elv).save(
+                        os.path.join(out_dir, 'elevations/', file_name)
+                        )
+
                 # save mask
                 Image.fromarray(sub_mask).save(
                         os.path.join(out_dir, 'masks/', file_name)
                         )
-        print("Num of imgs processed:", len(img_ids))
+    print("Num of imgs processed:", len(img_ids))
 
 
         
