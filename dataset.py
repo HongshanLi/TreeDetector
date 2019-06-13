@@ -1,9 +1,10 @@
-import errno
 import imageio
 import scipy
 import PIL.Image as Image
+import time
 
-from torch.utils.data import Dataset
+import torch
+from torch.utils.data import Dataset, DataLoader
 import torchvision.datasets as ds
 import torchvision.transforms as transforms
 
@@ -128,7 +129,7 @@ def preprocess_imgs(img_dir, out_dir):
     img_ids = _create_img_ids(img_dir)
     
     num = 1250 // 250
-    for img_id in img_ids[0:1]:
+    for img_id in img_ids:
         # img sub-folder
         img_sfd = img_id.split('-')[0]
 
@@ -163,7 +164,7 @@ def preprocess_imgs(img_dir, out_dir):
                 sub_img = img[start_x:end_x, start_y:end_y,0:3]
 
                 # elv img only has one channel
-                sub_elv = img[start_x:end_x, start_y:end_y]
+                sub_elv = elv[start_x:end_x, start_y:end_y]
 
                 sub_mask = mask[start_x:end_x, start_y:end_y,0:3]
                 
@@ -187,16 +188,57 @@ def preprocess_imgs(img_dir, out_dir):
     print("Num of imgs processed:", len(img_ids))
 
 
+def compute_mean_std(dataset):
+    '''compute channelwise mean and std of the dataset
+    Arg:
+        dataset: pytorch Dataset where each data is a tensorized PIL img
+    '''
+    batch_size=5
+    loader = DataLoader(dataset, batch_size=batch_size, num_workers=2, shuffle=False)
+    start = time.time()
+
+    # compute means for each channels
+    mean = 0
+
+    for i,(img, elv, mask) in enumerate(loader):
+        mean = mean + torch.mean(img, dim=[0,2,3])
+    
+    mean = mean /(i+1)
+    
+    # compute std
+    cum_var = 0
+    _mean = mean.view(1, 3, 1, 1).repeat(batch_size, 1, 250,250) 
+    for i,(img, elv, mask) in enumerate(loader):
+        # repeat means across channels
         
+        try:
+            cum_var = cum_var + torch.mean((img - _mean)**2, dim=[0,2,3])
+        except:
+            print('current img:', img.shape)
+            print('current mean', _mean.shape)
+    var = cum_var / (i + 1)
+
+    std = torch.sqrt(var)
+    
+    return mean, std
 
 class TreeDataset(Dataset):
     #TODO divid each img into 5 x 5 subimages
     # each of which has dimension 250 x 250 
 
-    def __init__(self, proc_dir, purpose='train'):
+    def __init__(self, proc_dir, transform=None, 
+        elv_transform=None, mask_transform=None, purpose='train'):
+        # TODO define transforms here
+
+
+
         # get a list of img files
         self.proc_dir = proc_dir
         self.file_names = self.get_file_names()
+
+        self.transform = transform
+        self.elv_transform = elv_transform
+        self.mask_transform = mask_transform
 
         # choose the same 90% imgs for training
         np.random.seed(42)
@@ -231,6 +273,8 @@ class TreeDataset(Dataset):
             self.file_names = val_set
         elif purpose=='test':
             self.file_names = test_set
+        elif purpose==None:
+            pass
         else:
             print("purpose must be 'train', 'val' or 'test'")
 
@@ -248,7 +292,18 @@ class TreeDataset(Dataset):
         img = io.imread(img)
         elv = io.imread(elv)
         mask = io.imread(mask)
-        return img, elv, mask
+
+        if self.transform is not None:
+            img  = self.transform(img)
+
+        if self.elv_transform is not None:
+            elv = self.elv_transform(elv)
+        
+        if self.mask_transform is not None:
+            mask = self.mask_transform(mask)
+
+        # @TODO add elv back
+        return img, elv, mask[1,:,:].view(1,250,250)
     
     def get_file_names(self):
         file_names = os.listdir(os.path.join(
@@ -257,14 +312,35 @@ class TreeDataset(Dataset):
 
 
 if __name__=='__main__':
-    img_dir = '/home/hongshan/data/Trees'
-    out_dir = '/home/hongshan/data/Trees_processed'
-    d = TreeDataset(out_dir)
-    for i in range(10):
-        x,y,z = d[i]
-        st.image(x)
-        st.image(y)
-        st.image(z)
+    def test_dataset():
+        img_dir = '/home/hongshan/data/Trees'
+        out_dir = '/home/hongshan/data/Trees_processed'
+        
+        d = TreeDataset(out_dir)
 
 
+        for i in range(10):
+            x,y,z,fn = d[i]
+            st.write("Image {}".format(fn))
+            s = z[:,:,1]
+            img = Image.fromarray(x)
+            elv = Image.fromarray(y)
+            full = Image.fromarray(z)
+            single = Image.fromarray(s)
+            st.image([img, elv, full, single])
+        return
+
+    def test_compute_mean_std(dataset):
+        compute_mean_std(dataset)
+        return
+
+    transform=transforms.Compose([
+        transforms.ToPILImage(),
+        transforms.ToTensor()])
+
+    data_dir = '/home/hongshan/data/Trees_processed/'
+    ds = TreeDataset(data_dir, transform=transform, elv_transform=transform,
+            mask_transform=transform, purpose=None)
+    mean,std = compute_mean_std(ds)
+    print(mean, std)
 

@@ -43,28 +43,55 @@ class Mask(nn.Module):
 
             in_channels = 2048 // (2**i)
             out_channels = 2048 // (2**(i+1))
+
             module = nn.Sequential()
             deconv = nn.ConvTranspose2d(
                 in_channels, out_channels, kernel_size=2,
                 stride=2, padding=padding)
             module.add_module('deconv_{0}'.format(i+1), deconv)
+            
+            bn = nn.BatchNorm2d(out_channels)
+            module.add_module('bn_{}'.format(i+1), bn)
+
+            act = nn.ReLU()
+            module.add_module('relu_{0}'.format(i+1), act)
+            
             self.module_list.append(module)
 
-    
+        in_channels = 2048 // (2**5)
+        out_channels = 1
+
+        mask = nn.Sequential(
+            nn.ConvTranspose2d(in_channels, out_channels, kernel_size=1),
+            nn.Sigmoid()
+            )
+
+        self.module_list.append(mask)
 
     def forward(self, x):
         for module in self.module_list:
             x = module(x)
-            print(x.shape)
+        return x
 
 
-
+class Model(nn.Module):
+    '''final model for creating tree mask for 2d RGB images'''
+    def __init__(self):
+        super(Model, self).__init__()
         
-
+        # feature extractor
+        self.fe = ResNetFE()
+        self.mask = Mask()
+    
+    def forward(self, x):
+        x = self.fe(x)
+        x = self.mask(x)
+        return x
 
 
 if __name__=='__main__':
-    m = Mask()
-    x = torch.Tensor(2, 2048, 8, 8)
+    m = Model()
+    x = torch.Tensor(2, 3, 250, 250)
     y = m(x)
+    print(y.shape)
 
