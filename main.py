@@ -55,6 +55,7 @@ parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
 parser.add_argument('--epochs', default=90, type=int, metavar='N',
                     help='number of total epochs to run')
+
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                     help='manual epoch number (useful on restarts)')
 parser.add_argument('-b', '--batch-size', default=256, type=int,
@@ -73,6 +74,14 @@ parser.add_argument('-p', '--print-freq', default=10, type=int,
                     metavar='N', help='print frequency (default: 10)')
 parser.add_argument('--resume', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
+parser.add_argument('--log-dir', default='./logs', type=str, metavar="PATH",
+                    help='dir to save logs')
+parser.add_argument('--ckp-dir', default='./ckps', type=str, metavar="PATH",
+                    help='checkpoint directory')
+
+parser.add_argument('--train', dest='train', action='store_true', 
+                    help='train the model')
+
 parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
                     help='evaluate model on validation set')
 parser.add_argument('--pretrained', dest='pretrained', action='store_true',
@@ -97,6 +106,12 @@ parser.add_argument('--multiprocessing-distributed', action='store_true',
 
 def main():
     args = parser.parse_args()
+
+    if not os.path.isdir(args.ckp_dir):
+        os.mkdir(args.ckp_dir)
+
+    if not os.path.isdir(args.log_dir):
+        os.mkdir(args.log_dir)
     
     transform = transforms.Compose([
         transforms.ToPILImage(),
@@ -132,29 +147,21 @@ def main():
     validator = Validator(val_dataset=val_dataset, model=model, 
             criterion=criterion, args=args)
 
-    trainer(1)
 
-    """
-    if args.estimate:
+    if args.evaluate:
         # print some stuff to show model size
         # GPU memories need to hold the model
         # amount of data 
         # print total training steps for one epoch
 
-
         return
 
-    if args.evaluate:
-        validator()
-        return
 
     if args.train:
         for epoch in range(args.start_epoch, args.epochs):
             trainer(epoch)
-            validator()
+            validator(epoch)
             validator.is_best(epoch)
-
-    """
 
 
 if __name__=="__main__":

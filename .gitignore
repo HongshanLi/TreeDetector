@@ -1,8 +1,9 @@
 __pycache__/
 
 # model checkpoints
-ckp/
+ckps/
 
+logs/
 
 .streamlit/
 .ipynb_checkpoints

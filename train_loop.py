@@ -1,11 +1,9 @@
-# define Trainer here, 
-# trainer should contain logics that trains the model for one epoch
-# Define some helper functions like: logging loss/error printing 
-# loss and accuracy
-# for classification related tasks
-
+import torch
 from torch.utils.data import DataLoader
 import torch.optim as optim
+import os
+import pickle
+
 
 def _accuracy():
     return
@@ -22,16 +20,13 @@ def _top_five_accuracy():
 
 
 # checkpoints
-def _save_checkpoints(state, is_best, ckp_dir, ckpfile):
-    ckp_path = os.path.join(ckp_dir, ckpfile)
-    torch.save(state, ckp_path)
-    best_model_path = os.path.join(ckp_dir, 'model_best.pth')
-    if is_best:
-        shutil.copyfile(ckp_path, best_model_path)
+def _save_checkpoint(state_dict, ckp_path):
+    torch.save(state_dict, ckp_path)
     return
+    
 
 # print out progress
-def _print(epoch, step, steps, args, **kwargs):
+def _print(epoch, step, steps, loss, args):
     '''
     Args:
         args: global arguments
@@ -39,8 +34,10 @@ def _print(epoch, step, steps, args, **kwargs):
     epochs = args.epochs
     message = 'Epoch: [{}/{}]'.format(epoch, epochs)
     message = message + 'Step: [{}/{}]'.format(step, steps)
-        
-    # TODO add kwarg print        
+    message = message + 'Loss: {}'.format(loss)    
+    # TODO add kwarg print
+
+    print(message)
 
     return message
 
@@ -53,8 +50,10 @@ class Logger(object):
             args: global arguments
             train:(boolean) log for training?
         '''
+        self.train = train
         self.model = model
         self.args = args
+        # read the log files if not the starting from 0 th 
         self.log = {}
     
     def new_epoch(self,epoch):
@@ -62,37 +61,50 @@ class Logger(object):
         self.log[epoch] = []
         return
 
-    def __call__(self, epoch, **kwargs):
+    def __call__(self, epoch, step, loss, lr, **kwargs):
         step_log = {}
+
+        step_log['step'] = step
+        step_log['loss'] = loss
+        step_log['lr'] = lr
+        
+        # might need a try except bk if kwargs is empty
         for k,v in kwargs.items():
             step_log[k] = v
+
         self.log[epoch].append(step_log)
         return
 
+    def _epoch_avg_loss(self, epoch):
+        '''compute the average loss of current epoch'''
+        loss = 0 
+        for step in self.log[epoch]:
+            loss = loss + step['loss']
+
+        loss = loss / len(self.log[epoch])
+        return loss
+
 
     def is_best(self, epoch):
-        '''check if the model (validation) is the best from all epochs'''
-        epoch_pfm = self.log[epoch]
-        # compute average loss
-        loss = 0
-        for i, item in enumerate(epoch_pfm):
-            loss += item['loss']
+        '''check if the model (validation) is the best from all epochs
+        '''
+        if epoch == 0:
+            self.log['min_loss'] = self._epoch_avg_loss(epoch)    
+            self.log['best_model'] = 0
 
-        avg_loss=float(loss) / float(i+1)
+        avg_loss = self._epoch_avg_loss(epoch)
+        
+        min_loss = self.log['min_loss']
 
-        if avg_loss < self.min_loss:
-            self.min_loss = avg_loss
-            self.log[epoch].append(
-                    {'is_best': True}
-                    )
-        else:
-            self.log[epoch].append(
-                    {'is_best': False}
-                    )
+        if avg_loss <= min_loss:
+            min_loss = avg_loss
+            self.log['min_loss'] = avg_loss
+            self.log['best_model'] = epoch
+
         return 
 
 
-    def save_logs(self):
+    def save_log(self):
         try:
             if self.train:
                 logfile=os.path.join(
@@ -104,25 +116,24 @@ class Logger(object):
                         'val_log.pickle')
 
             with open(logfile, 'wb') as f:
-                pickle.dump(self.step_log, f)
+                pickle.dump(self.log, f)
         # KeyboardInterrupt occurs while saving
         except KeyboardInterrupt:
-            self.save_logs()
+            self.save_log()
         return
 
-
     def save_ckp(self, epoch):
-        ckpfile = 'model_{}.pth'.format(epoch)
-        is_best = self.log[epoch][-1]['is_best']
+        ckp_file = 'model_{}.pth'.format(epoch)
         try:
-            _save_checkpoint(state, is_best, self.args.ckp_dir, ckpfile)
+            state_dict = self.model.state_dict()
+            ckp_path = os.path.join(self.args.ckp_dir, 
+                    ckp_file)
+
+            _save_checkpoint(state_dict, ckp_path)
         # KeyboardInterrupt occurs while saving
         except KeyboardInterrupt:
             self.save_ckp()
         return
-
-
-
 
 class Validator(object):
     """Wrapper for validation
@@ -144,11 +155,11 @@ class Validator(object):
 
     def __call__(self, epoch):
         self.logger.new_epoch(epoch)
-        for step, (feature, _, mask) in enumerate(self.val_loader):
+        for step, (feature, elv, mask) in enumerate(self.val_loader):
             try:
-                output = self.model(features)
+                output = self.model(feature)
                 loss = self.criterion(output, mask)
-                self.logger(step=step, loss=loss, lr=self.args.lr)
+                self.logger(epoch=epoch, step=step, loss=loss, lr=self.args.lr)
             except KeyboardInterrupt:
                 # remove logs from the current epoch and save
                 # the logs from the rest
@@ -156,8 +167,12 @@ class Validator(object):
                 self.logger.save_log()
 
         self.logger.save_log()
-        self.logger.save_ckp()
+        self.logger.save_ckp(epoch)
+        return
 
+    def is_best(self, epoch):
+        '''determine if the model after current epoch is the best'''
+        self.logger.is_best(epoch)
         return
     
 
@@ -191,20 +206,17 @@ class Trainer(object):
         """Train one epoch"""
         self.logger.new_epoch(epoch)
         for step, (feature, elv, mask) in enumerate(self.train_loader):
-            print(feature.shape, elv.shape, mask.shape)
-
             try:
                 self.optimizer.zero_grad()
                 output = self.model(feature)
-                print(mask.shape, output.shape)
                 loss = self.criterion(output, mask)
                 loss.backward()
                 self.optimizer.step()            
                 loss = loss.detach().cpu().item()
                 self.logger(epoch=epoch, step=step, loss=loss, lr=self.args.lr)
-                if step % self.args.print_freq==0:
+                if step % 1==0:
                     _print(epoch=epoch, step=step, steps=self.total_steps,
-                            loss=loss, args=self.args, lr=self.args.lr)
+                            loss=loss, args=self.args)
 
 
             # if KeyboardInterrupt happens during training
@@ -213,10 +225,10 @@ class Trainer(object):
             except KeyboardInterrupt:
                 print("Saving logs from previous epochs before shutting down the process")
                 self.logger.log[epoch] = None
-                self.logger.save_logs()
+                self.logger.save_log()
 
-        self.logger.save_logs()
-        self.logger.save_ckp()
+        self.logger.save_log()
+        self.logger.save_ckp(epoch)
         return
 
 
