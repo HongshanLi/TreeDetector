@@ -62,7 +62,8 @@ class Mask(nn.Module):
         out_channels = 1
 
         mask = nn.Sequential(
-            nn.ConvTranspose2d(in_channels, out_channels, kernel_size=1),
+            nn.ConvTranspose2d(in_channels, out_channels, 
+                kernel_size=1),
             nn.Sigmoid()
             )
 

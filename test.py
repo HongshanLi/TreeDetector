@@ -1,13 +1,8 @@
 import random
-from utils import CocoYoLo
 import torch
-from torch.utils.data import DataLoader
 import time
-from darknet import Darknet
-from trainer import Trainer
 
-import streamlit as st
-
+from dataset import TreeDataset
 
 def main():
     tr.train_one_epoch()
@@ -30,3 +25,8 @@ def test_CocoMask(img_dir, annFile):
 
 #print(y.shape)
 #print(dark)
+
+data='/mnt/efs/Trees_processed/'
+ds = TreeDataset(data)
+x, y, z = ds[0]
+print(z.shape, z)

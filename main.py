@@ -56,7 +56,7 @@ parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
 parser.add_argument('--epochs', default=90, type=int, metavar='N',
                     help='number of total epochs to run')
 
-parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
+parser.add_argument('--start-epoch', default=1, type=int, metavar='N',
                     help='manual epoch number (useful on restarts)')
 parser.add_argument('-b', '--batch-size', default=256, type=int,
                     metavar='N',
@@ -81,7 +81,6 @@ parser.add_argument('--ckp-dir', default='./ckps', type=str, metavar="PATH",
 
 parser.add_argument('--train', dest='train', action='store_true', 
                     help='train the model')
-
 parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
                     help='evaluate model on validation set')
 parser.add_argument('--pretrained', dest='pretrained', action='store_true',
@@ -104,6 +103,11 @@ parser.add_argument('--multiprocessing-distributed', action='store_true',
                          'fastest way to use PyTorch for either single node or '
                          'multi node data parallel training')
 
+# evaluation
+parser.add_argument('-t', '--threshold', dest='threshold',
+        type=float, default=0.5, 
+        help='threshold to convert softmax to one-hot encode')
+
 def main():
     args = parser.parse_args()
 
@@ -112,30 +116,10 @@ def main():
 
     if not os.path.isdir(args.log_dir):
         os.mkdir(args.log_dir)
-    
-    transform = transforms.Compose([
-        transforms.ToPILImage(),
-        transforms.ToTensor(),
-        transforms.Normalize(
-            (0.4137, 0.4233, 0.3968),
-            (0.2275, 0.2245, 0.2424))
-        ])
-    elv_transform = transforms.Compose([
-        transforms.ToPILImage(),
-        transforms.ToTensor()])
 
-    mask_transform = transforms.Compose([
-        transforms.ToPILImage(),
-        transforms.ToTensor()])
+    train_dataset = TreeDataset(args.data, purpose='train')
 
-
-    train_dataset = TreeDataset(args.data, transform=transform,
-            elv_transform=elv_transform, mask_transform=mask_transform, 
-            purpose='train')
-
-    val_dataset = TreeDataset(args.data, transform=transform,
-            elv_transform=elv_transform, mask_transform=mask_transform, 
-            purpose='val')
+    val_dataset = TreeDataset(args.data, purpose='val')
 
 
     model = Model()
@@ -158,7 +142,7 @@ def main():
 
 
     if args.train:
-        for epoch in range(args.start_epoch, args.epochs):
+        for epoch in range(args.start_epoch, args.epochs+1):
             trainer(epoch)
             validator(epoch)
             validator.is_best(epoch)

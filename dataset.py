@@ -228,17 +228,29 @@ class TreeDataset(Dataset):
 
     def __init__(self, proc_dir, transform=None, 
         elv_transform=None, mask_transform=None, purpose='train'):
-        # TODO define transforms here
-
-
-
+        
         # get a list of img files
         self.proc_dir = proc_dir
         self.file_names = self.get_file_names()
 
-        self.transform = transform
-        self.elv_transform = elv_transform
-        self.mask_transform = mask_transform
+        
+    
+        self.transform = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.ToTensor(),
+            transforms.Normalize(
+                (0.4137, 0.4233, 0.3968),
+                (0.2275, 0.2245, 0.2424))
+            ])
+
+        self.elv_transform = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.ToTensor()])
+
+        self.mask_transform = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.ToTensor()])
+
 
         # choose the same 90% imgs for training
         np.random.seed(42)
@@ -301,9 +313,9 @@ class TreeDataset(Dataset):
         
         if self.mask_transform is not None:
             mask = self.mask_transform(mask)
+            mask = mask[1,:,:].view(1,250,250)
 
-        # @TODO add elv back
-        return img, elv, mask[1,:,:].view(1,250,250)
+        return img, elv, mask
     
     def get_file_names(self):
         file_names = os.listdir(os.path.join(
