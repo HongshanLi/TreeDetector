@@ -127,10 +127,11 @@ def main():
 
     trainer = Trainer(train_dataset=train_dataset, 
             model=model, criterion=criterion, args=args)
-
+    
+    '''
     validator = Validator(val_dataset=val_dataset, model=model, 
             criterion=criterion, args=args)
-
+    '''
 
     if args.evaluate:
         # print some stuff to show model size

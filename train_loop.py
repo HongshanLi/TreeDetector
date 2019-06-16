@@ -175,12 +175,14 @@ class Validator(object):
     includes save ckps find best model and checkpoint
     """
     def __init__(self, val_dataset, model, criterion, args):
+        self.device = torch.device("cuda:0")
         self.val_dataset = val_dataset
         self.val_loader = DataLoader(
                 val_dataset, batch_size=args.batch_size, 
                 shuffle=False, num_workers=args.workers)
 
-        self.model = model.eval()
+        self.model = model.eval().to(self.device)
+
         self.criterion = criterion
         self.args = args
         self.logger = Logger(train=False, model=self.model, 
@@ -192,6 +194,9 @@ class Validator(object):
         self.logger.new_epoch(epoch)
         for step, (feature, elv, mask) in enumerate(self.val_loader):
             step = step + 1
+            feature = feature.to(self.device)
+            elv = elv.to(self.device)
+            mask = mask.to(self.device)
 
             try:
                 output = self.model(feature)
@@ -226,6 +231,10 @@ class Validator(object):
 class Trainer(object):
     def __init__(self, train_dataset, model, 
             criterion, args):
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() 
+                else "cpu")
+        print("Device: ", self.device)
+
         self.train_dataset = train_dataset
         self.train_loader = DataLoader(
                 train_dataset, batch_size=args.batch_size,
@@ -234,9 +243,11 @@ class Trainer(object):
         self.args = args
         self.total_steps = self.total_steps()
 
-        self.model = model.train()
+        self.model = model.train().to(self.device)
+
         self.criterion = criterion
-        self.optimizer = optim.Adam(self.model.parameters())
+        self.optimizer = optim.Adam(self.model.parameters(), 
+                lr=self.args.lr, weight_decay=1e-5)
         self.logger = Logger(model=self.model, args=self.args)
         return
 
@@ -254,6 +265,10 @@ class Trainer(object):
         self.logger.new_epoch(epoch)
         for step, (feature, elv, mask) in enumerate(self.train_loader):
             step = step + 1
+            feature = feature.to(self.device)
+            elv = elv.to(self.device)
+            mask = mask.to(self.device)
+
             try:
                 self.optimizer.zero_grad()
                 output = self.model(feature)
@@ -285,6 +300,8 @@ class Trainer(object):
         self.logger.save_log()
         self.logger.save_ckp(epoch)
         return
+
+
 
 
 

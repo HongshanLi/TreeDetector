@@ -1,3 +1,3 @@
 #!/bin/bash
-python main.py /mnt/efs/babyTrees_processed/ -j=2 --lr=0.0001 -b=2 \
-        --print-freq=1 --train --epochs=2
+python main.py /mnt/efs/Trees_processed/ -j=2 --lr=0.0001 -b=16 \
+        --print-freq=10 --train --epochs=2

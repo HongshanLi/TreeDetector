@@ -8,12 +8,11 @@ from torch.utils.data import Dataset, DataLoader
 import torchvision.datasets as ds
 import torchvision.transforms as transforms
 
-from torchvision.datasets import VisionDataset
+#from torchvision.datasets import VisionDataset
 import numpy as np
 import PIL.Image as Image
 import os
 import skimage.io as io
-import streamlit as st
 import random
 
 img_dir='/home/hongshan/data/train2017'
@@ -25,7 +24,7 @@ annFile='/home/hongshan/data/annotations/instances_train2017.json'
 # pad to 640 and centercrop to 608
 
 
-class CocoMask(VisionDataset):
+class CocoMask():
     """Create mask for a chosen category.
 
     Args:

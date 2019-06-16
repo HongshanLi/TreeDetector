@@ -34,6 +34,7 @@ class Mask(nn.Module):
         super(Mask, self).__init__()
         # make things reproducible
         torch.manual_seed(8128)
+
         self.module_list = nn.ModuleList()
         for i in range(0, 5):
             if i <= 3:
