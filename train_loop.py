@@ -186,9 +186,7 @@ class Trainer(object):
         
         train_loss = train_loss / self.total_steps
         train_acc = train_acc / self.total_steps
-
         self.logger(epoch=epoch, train_loss=train_loss, train_acc=train_acc)
-        
         self.save_ckp(epoch)
         return
     
@@ -218,6 +216,7 @@ class Trainer(object):
 
             self.logger(epoch=epoch, val_loss=val_loss, val_acc=val_acc)
             print("Val Loss: {:0.2f}, Val Acc: {:0.2f}".format(val_loss, val_acc))
+
         return
 
     def save_ckp(self, epoch):

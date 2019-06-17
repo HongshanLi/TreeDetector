@@ -4,6 +4,7 @@ import random
 import shutil
 import time
 import warnings
+import pickle
 
 import torch
 import torch.nn as nn
@@ -44,7 +45,7 @@ from train_loop import Trainer
 model_names = []
 
 parser = argparse.ArgumentParser(description='PyTorch Model For Segmenting Trees')
-parser.add_argument('data', metavar='DIR',
+parser.add_argument('--data', metavar='DIR', required=False,
                     help='path to dataset')
 parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
                     choices=model_names,
@@ -72,8 +73,10 @@ parser.add_argument('--wd', '--weight-decay', default=1e-4, type=float,
                     dest='weight_decay')
 parser.add_argument('-p', '--print-freq', default=10, type=int,
                     metavar='N', help='print frequency (default: 10)')
-parser.add_argument('--resume', default='', type=str, metavar='PATH',
-                    help='path to latest checkpoint (default: none)')
+
+parser.add_argument('--resume', dest='resume', default='./ckps/best_model.pth',
+                    metavar='PATH',
+                    help='resume training from a checkpoint')
 parser.add_argument('--log-dir', default='./logs', type=str, metavar="PATH",
                     help='dir to save logs')
 parser.add_argument('--ckp-dir', default='./ckps', type=str, metavar="PATH",
@@ -85,6 +88,10 @@ parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
                     help='evaluate model on validation set')
 parser.add_argument('--pretrained', dest='pretrained', action='store_true',
                     help='use pre-trained model')
+parser.add_argument('--find-best-model', dest='find_best_model', 
+        action='store_true', help='find the best model from the ckp')
+
+
 parser.add_argument('--world-size', default=-1, type=int,
                     help='number of nodes for distributed training')
 parser.add_argument('--rank', default=-1, type=int,
@@ -117,17 +124,6 @@ def main():
     if not os.path.isdir(args.log_dir):
         os.mkdir(args.log_dir)
 
-    train_dataset = TreeDataset(args.data, purpose='train')
-
-    val_dataset = TreeDataset(args.data, purpose='val')
-
-
-    model = Model()
-    criterion = Criterion()
-
-    trainer = Trainer(train_dataset=train_dataset,
-            val_dataset=val_dataset, 
-            model=model, criterion=criterion, args=args)
     
     '''
     validator = Validator(val_dataset=val_dataset, model=model, 
@@ -144,9 +140,41 @@ def main():
 
 
     if args.train:
+        train_dataset = TreeDataset(args.data, purpose='train')
+        val_dataset = TreeDataset(args.data, purpose='val')
+        model = Model()
+        criterion = Criterion()
+        trainer = Trainer(train_dataset=train_dataset,
+                val_dataset=val_dataset, 
+                model=model, criterion=criterion, args=args)
+
         for epoch in range(args.start_epoch, args.epochs+1):
             trainer(epoch)
             trainer.validate(epoch)
+            trainer.logger.save_log()
+
+    if args.find_best_model:
+        # find the best models from checkpoint
+        logpath = os.path.join(args.log_dir, 'log.pickle')
+        with open(logpath, 'rb') as f:
+            log = pickle.load(f)
+
+        print(log)
+        
+        best_model = 1
+        min_loss = log[1]['loss']
+        for k, v in log.items():
+            if v['loss'] <= min_loss:
+                min_loss = v['loss']
+                best_model = k
+        print("best model is : model_{}.pth".format(best_model))
+        
+        bpth=os.path.join(args.ckp_dir, 'best_model.pth')
+        print("It has been copied to {}".format(bpth))
+
+            
+
+
 
 
 if __name__=="__main__":

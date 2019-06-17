@@ -3,7 +3,13 @@ __pycache__/
 # model checkpoints
 ckps/
 
+# any backup files
+*.bak/
+
 logs/
+
+# tmp files
+./tmp/
 
 .streamlit/
 .ipynb_checkpoints
