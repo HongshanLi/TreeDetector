@@ -217,7 +217,7 @@ class Trainer(object):
         self.optimizer = optim.Adam(self.model.parameters(), 
                 lr=self.args.lr, weight_decay=1e-5)
 
-        self.logger = Logger(model=self.model, args=self.args)
+        self.logger = Logger(self.args.log_dir)
         return
 
     def total_steps(self):

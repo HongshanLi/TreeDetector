@@ -125,7 +125,8 @@ def main():
     model = Model()
     criterion = Criterion()
 
-    trainer = Trainer(train_dataset=train_dataset, 
+    trainer = Trainer(train_dataset=train_dataset,
+            val_dataset=val_dataset, 
             model=model, criterion=criterion, args=args)
     
     '''
