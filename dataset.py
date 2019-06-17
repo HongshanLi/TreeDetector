@@ -345,13 +345,8 @@ if __name__=='__main__':
         compute_mean_std(dataset)
         return
 
-    transform=transforms.Compose([
-        transforms.ToPILImage(),
-        transforms.ToTensor()])
 
-    data_dir = '/home/hongshan/data/Trees_processed/'
-    ds = TreeDataset(data_dir, transform=transform, elv_transform=transform,
-            mask_transform=transform, purpose=None)
-    mean,std = compute_mean_std(ds)
-    print(mean, std)
+    data_dir = '/mnt/efs/Trees_processed/'
+    ds = TreeDataset(data_dir,purpose='validate')
+    print(ds.file_names)
 

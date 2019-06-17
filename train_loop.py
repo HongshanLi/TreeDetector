@@ -105,8 +105,6 @@ class Logger(object):
         return
 
 
-
-
 class Trainer(object):
     def __init__(self, train_dataset, val_dataset, model, 
             criterion, args):
@@ -148,6 +146,7 @@ class Trainer(object):
 
     def __call__(self, epoch):
         """Train one epoch"""
+        self.model = self.model.train()
         self.logger.new_epoch(epoch)
 
         train_loss = 0
@@ -189,34 +188,36 @@ class Trainer(object):
         train_acc = train_acc / self.total_steps
 
         self.logger(epoch=epoch, train_loss=train_loss, train_acc=train_acc)
-
+        
+        self.save_ckp(epoch)
         return
     
     def validate(self, epoch):
         print('validating model after epoch: {}'.format(epoch))
         self.model = self.model.eval()
-        val_loss = 0
-        val_acc = 0
+        with torch.no_grad():
+            val_loss = 0
+            val_acc = 0
 
-        for step, (feature, elv, mask) in enumerate(self.val_loader):
-            step = step + 1
-            feature = feature.to(self.device)
-            mask = mask.to(self.device)
+            for step, (feature, elv, mask) in enumerate(self.val_loader):
+                step = step + 1
+                feature = feature.to(self.device)
+                mask = mask.to(self.device)
 
-            output = self.model(feature)
-            loss = self.criterion(output, mask)
+                output = self.model(feature)
+                loss = self.criterion(output, mask)
+                
+                acc = _pixelwise_accuracy(output, mask, 
+                    threshold=self.args.threshold)
+
+                val_loss = val_loss + loss.cpu().item()
+                val_acc = val_acc + acc
             
-            acc = _pixelwise_accuracy(output, mask, 
-                threshold=self.args.threshold)
+            val_loss = val_loss / step
+            val_acc = val_acc / step
 
-            val_loss = val_loss + loss.cpu().item()
-            val_acc = val_acc + acc
-        
-        val_loss = val_loss / self.total_steps
-        val_acc = val_acc / self.total_steps
-
-        self.logger(epoch=epoch, val_loss=val_loss, val_acc=val_acc)
-        print("Val Loss: {:0.2f}, Val Acc: {:0.2f}".format(val_loss, val_acc))
+            self.logger(epoch=epoch, val_loss=val_loss, val_acc=val_acc)
+            print("Val Loss: {:0.2f}, Val Acc: {:0.2f}".format(val_loss, val_acc))
         return
 
     def save_ckp(self, epoch):
