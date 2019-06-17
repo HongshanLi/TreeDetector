@@ -23,7 +23,7 @@ import torchvision.models as models
 from dataset import TreeDataset
 from model import Model
 from criterion import Criterion
-from train_loop import Trainer, Validator
+from train_loop import Trainer
 
 
 """Arguments:
@@ -146,8 +146,7 @@ def main():
     if args.train:
         for epoch in range(args.start_epoch, args.epochs+1):
             trainer(epoch)
-            validator(epoch)
-            validator.is_best(epoch)
+            trainer.validate(epoch)
 
 
 if __name__=="__main__":
