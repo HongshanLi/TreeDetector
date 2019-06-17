@@ -55,71 +55,30 @@ def _pixelwise_accuracy(output, target, threshold=0.5):
     acc = torch.sum(correct) / torch.sum(torch.ones(target.shape))
     acc = acc.cpu().item()
     return acc
-
-
-    
         
 class Logger(object):
     '''log the training process'''
-    def __init__(self, model, args, train=True):
+    def __init__(self, log_dir):
         '''
         Args:
-            args: global arguments
-            train:(boolean) log for training?
+            log_dir: directory to save the log file
         '''
         self.train = train
-        self.model = model
         self.args = args
         # read the log files if not the starting from 0 th 
         self.log = {}
     
     def new_epoch(self,epoch):
         '''make log for new epoch'''
-        self.log[epoch] = []
+        self.log[epoch] = {}
         return
 
+    def __call__(self, epoch,  **kwargs):
 
-    def __call__(self, epoch, step, loss, lr, **kwargs):
-        step_log = {}
-
-        step_log['step'] = step
-        step_log['loss'] = loss
-        step_log['lr'] = lr
-        
         # might need a try except bk if kwargs is empty
         for k,v in kwargs.items():
-            step_log[k] = v
-
-        self.log[epoch].append(step_log)
+            self.log[epoch][k] = v
         return
-
-    def _epoch_avg_loss(self, epoch):
-        '''compute the average loss of current epoch'''
-        loss = 0 
-        for step in self.log[epoch]:
-            loss = loss + step['loss']
-
-        loss = loss / len(self.log[epoch])
-        return loss
-
-    def compute_epoch_avg_loss(self, epoch):
-        loss = 0
-        for step in self.log[epoch]:
-            loss = loss + step['loss']
-        loss = loss / len(self.log[epoch])
-
-        self.avg_loss = loss
-        return loss
-
-
-    def compute_epoch_avg_acc(self, epoch):
-        '''compute avg acc of the epoch'''
-        acc = 0
-        for step in self.log[epoch]:
-            acc = acc + step['acc']
-
-        acc = acc / len(self.log[epoch])
-        return acc
 
     def is_best(self, epoch):
         '''check if the model (validation) is the best from all epochs
@@ -135,11 +94,14 @@ class Logger(object):
             min_loss = avg_loss
             self.log['min_loss'] = avg_loss
             self.log['best_model'] = epoch
-
         return 
 
 
     def save_log(self):
+        
+
+
+
         try:
             if self.train:
                 logfile=os.path.join(
@@ -229,16 +191,22 @@ class Validator(object):
     
 
 class Trainer(object):
-    def __init__(self, train_dataset, model, 
+    def __init__(self, train_dataset, val_dataset, model, 
             criterion, args):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() 
                 else "cpu")
         print("Device: ", self.device)
 
         self.train_dataset = train_dataset
+        self.val_dataset = val_dataset
+
         self.train_loader = DataLoader(
                 train_dataset, batch_size=args.batch_size,
                 shuffle=True, num_workers=args.workers)
+        
+        self.val_loader = DataLoader(
+                val_dataset, batch_size=args.batch_size,
+                shuffle=False, num_workers=args.workers)
 
         self.args = args
         self.total_steps = self.total_steps()
@@ -248,6 +216,7 @@ class Trainer(object):
         self.criterion = criterion
         self.optimizer = optim.Adam(self.model.parameters(), 
                 lr=self.args.lr, weight_decay=1e-5)
+
         self.logger = Logger(model=self.model, args=self.args)
         return
 
@@ -263,6 +232,9 @@ class Trainer(object):
     def __call__(self, epoch):
         """Train one epoch"""
         self.logger.new_epoch(epoch)
+
+        train_loss = 0
+        train_acc = 0
         for step, (feature, elv, mask) in enumerate(self.train_loader):
             step = step + 1
             feature = feature.to(self.device)
@@ -276,12 +248,11 @@ class Trainer(object):
                 loss.backward()
                 self.optimizer.step()            
                 loss = loss.detach().cpu().item()
-
                 acc = _pixelwise_accuracy(output, mask, 
                         threshold=self.args.threshold)
-
-                self.logger(epoch=epoch, step=step, loss=loss, 
-                        lr=self.args.lr, acc=acc)
+                
+                train_loss = train_loss + loss
+                train_acc = train_acc + acc
 
                 if step % self.args.print_freq == 0:
                     _print(epoch=epoch, epochs=self.args.epochs, 
@@ -296,10 +267,41 @@ class Trainer(object):
                 print("Saving logs from previous epochs before shutting down the process")
                 self.logger.log[epoch] = None
                 self.logger.save_log()
+        
+        train_loss = train_loss / self.total_steps
+        train_acc = train_acc / self.total_steps
 
-        self.logger.save_log()
-        self.logger.save_ckp(epoch)
+        self.logger(epoch=epoch, train_loss=train_loss, train_acc=train_acc)
+
         return
+    
+    def validate(self, epoch):
+        self.model = self.model.eval()
+        
+        val_loss = 0
+        val_acc = 0
+
+        for step, (feature, elv, mask) in enumerate(self.val_loader):
+            step = step + 1
+            feature = feature.to(self.device)
+            mask = mask.to(self.device)
+
+            output = self.model(feature)
+            loss = self.criterion(output, mask)
+            
+            acc = _pixelwise_accuracy(output, mask, 
+                threshold=self.args.threshold)
+
+            val_loss = val_loss + loss.cpu().item()
+            val_acc = val_acc + acc
+        
+        val_loss = avg_loss / self.total_steps
+        val_acc = val_acc / self.total_steps
+
+        self.logger(epoch=epoch, val_loss=val_loss, val_acc=val_acc)
+        return
+
+    
 
 
 
