@@ -1,7 +1,7 @@
 import argparse
 import os
 import random
-import shutil
+from shutil import copyfile
 import time
 import warnings
 import pickle
@@ -162,15 +162,19 @@ def main():
         print(log)
         
         best_model = 1
-        min_loss = log[1]['loss']
-        for k, v in log.items():
-            if v['loss'] <= min_loss:
-                min_loss = v['loss']
-                best_model = k
+        min_loss = log[1]['val_loss']
+        for epoch, eplog in log.items():
+            if eplog['val_loss'] <= min_loss:
+                min_loss = eplog['val_loss']
+                best_model = epoch
         print("best model is : model_{}.pth".format(best_model))
-        
         bpth=os.path.join(args.ckp_dir, 'best_model.pth')
-        print("It has been copied to {}".format(bpth))
+        print("copying it to {}".format(bpth)
+
+        copyfile(os.path.join(args.ckp_dir, 
+            'model_{}.pth'.format(best_model)),
+            bpth)
+
 
             
 
