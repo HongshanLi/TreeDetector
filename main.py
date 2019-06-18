@@ -57,8 +57,6 @@ parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
 parser.add_argument('--epochs', default=90, type=int, metavar='N',
                     help='number of total epochs to run')
 
-parser.add_argument('--start-epoch', default=1, type=int, metavar='N',
-                    help='manual epoch number (useful on restarts)')
 parser.add_argument('-b', '--batch-size', default=256, type=int,
                     metavar='N',
                     help='mini-batch size (default: 256), this is the total '
@@ -73,9 +71,9 @@ parser.add_argument('--wd', '--weight-decay', default=1e-4, type=float,
                     dest='weight_decay')
 parser.add_argument('-p', '--print-freq', default=10, type=int,
                     metavar='N', help='print frequency (default: 10)')
-
-parser.add_argument('--resume', dest='resume', default='./ckps/best_model.pth',
-                    metavar='PATH',
+parser.add_argument('--start-epoch', dest='start_epoch', type=int,
+                    metavar='N', help='epoch to start training')
+parser.add_argument('--resume', dest='resume', metavar='PATH',
                     help='resume training from a checkpoint')
 parser.add_argument('--log-dir', default='./logs', type=str, metavar="PATH",
                     help='dir to save logs')
@@ -143,12 +141,27 @@ def main():
         train_dataset = TreeDataset(args.data, purpose='train')
         val_dataset = TreeDataset(args.data, purpose='val')
         model = Model()
+        
+        if args.resume is not None:
+            model.load_state_dict(
+                    torch.load(os.path.join(
+                        args.ckp_dir, args.resume)))
+
+            # start from the end epoch of the previous 
+            # training loop
+            if args.start_epoch is not None:
+                start_epoch = args.start_epoch
+            else:
+                start_epoch=len(os.listdir(args.ckp_dir))
+        else:
+            start_epoch=1
+
         criterion = Criterion()
         trainer = Trainer(train_dataset=train_dataset,
                 val_dataset=val_dataset, 
                 model=model, criterion=criterion, args=args)
 
-        for epoch in range(args.start_epoch, args.epochs+1):
+        for epoch in range(start_epoch, start_epoch + args.epochs):
             trainer(epoch)
             trainer.validate(epoch)
             trainer.logger.save_log()
@@ -158,9 +171,6 @@ def main():
         logpath = os.path.join(args.log_dir, 'log.pickle')
         with open(logpath, 'rb') as f:
             log = pickle.load(f)
-
-        print(log)
-        
         best_model = 1
         min_loss = log[1]['val_loss']
         for epoch, eplog in log.items():
@@ -168,12 +178,7 @@ def main():
                 min_loss = eplog['val_loss']
                 best_model = epoch
         print("best model is : model_{}.pth".format(best_model))
-        bpth=os.path.join(args.ckp_dir, 'best_model.pth')
-        print("copying it to {}".format(bpth)
 
-        copyfile(os.path.join(args.ckp_dir, 
-            'model_{}.pth'.format(best_model)),
-            bpth)
 
 
             
