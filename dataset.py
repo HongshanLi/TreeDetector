@@ -224,7 +224,6 @@ def compute_mean_std(dataset):
 class TreeDataset(Dataset):
     #TODO divid each img into 5 x 5 subimages
     # each of which has dimension 250 x 250 
-
     def __init__(self, proc_dir, transform=None, 
         elv_transform=None, mask_transform=None, purpose='train'):
         
@@ -321,6 +320,104 @@ class TreeDataset(Dataset):
             self.proc_dir, 'imgs'))
         return file_names
 
+
+class TreeDatasetV1(Dataset):
+    '''stack elv image as an additional channel
+    over rgb images'''
+    def __init__(self, proc_dir, transform=None, 
+        elv_transform=None, mask_transform=None, purpose='train'):
+        
+        # get a list of img files
+        self.proc_dir = proc_dir
+        self.file_names = self.get_file_names()
+    
+        self.transform = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.ToTensor(),
+            transforms.Normalize(
+                (0.4137, 0.4233, 0.3968),
+                (0.2275, 0.2245, 0.2424))
+            ])
+
+        self.elv_transform = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.ToTensor()])
+
+        self.mask_transform = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.ToTensor()])
+
+
+        # choose the same 90% imgs for training
+        np.random.seed(42)
+        total_size = len(self.file_names)
+        train_size = int(total_size * 0.8)
+        val_size = int(total_size * 0.1)
+        test_size = int(total_size * 0.1)
+
+        dist = []
+        for i in range(total_size):
+            if i < train_size:
+                dist.append(0)
+            elif i>= 1 and i <train_size + val_size:
+                dist.append(1)
+            elif i>= train_size + val_size and i < total_size:
+                dist.append(2)
+
+        train_set = []
+        val_set = []
+        test_set = []
+        for i, b in enumerate(dist):
+            if b == 0:
+                train_set.append(self.file_names[i])
+            elif b==1:
+                val_set.append(self.file_names[i])
+            elif b==2:
+                test_set.append(self.file_names[i])
+
+        if purpose=='train':
+            self.file_names = train_set
+        elif purpose=='val':
+            self.file_names = val_set
+        elif purpose=='test':
+            self.file_names = test_set
+        elif purpose==None:
+            pass
+        else:
+            print("purpose must be 'train', 'val' or 'test'")
+
+    def __len__(self):
+        return len(self.file_names)
+
+    def __getitem__(self, idx):
+        # img subfolder
+        file_name = self.file_names[idx]
+
+        img = os.path.join(self.proc_dir, 'imgs/', file_name)
+        elv = os.path.join(self.proc_dir, 'elevations/', file_name)
+        mask = os.path.join(self.proc_dir, 'masks/', file_name)
+
+        img = io.imread(img)
+        elv = io.imread(elv)
+        mask = io.imread(mask)
+
+        if self.transform is not None:
+            img  = self.transform(img)
+
+        if self.elv_transform is not None:
+            elv = self.elv_transform(elv)
+
+        if self.mask_transform is not None:
+            mask = self.mask_transform(mask)
+            mask = mask[1,:,:].view(1,250,250)
+        
+        img = torch.cat([img, elv], dim=0)
+        return img, elv, mask
+    
+    def get_file_names(self):
+        file_names = os.listdir(os.path.join(
+            self.proc_dir, 'imgs'))
+        return file_names
 
 if __name__=='__main__':
     def test_dataset():

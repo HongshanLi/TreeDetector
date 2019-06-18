@@ -3,6 +3,9 @@ import torch
 import time
 
 from dataset import TreeDataset
+from dataset import TreeDatasetV1
+
+import streamlit as st
 
 def main():
     tr.train_one_epoch()
@@ -26,7 +29,8 @@ def test_CocoMask(img_dir, annFile):
 #print(y.shape)
 #print(dark)
 
-data='/mnt/efs/Trees_processed/'
-ds = TreeDataset(data)
+data='/home/hongshan/data/Trees_processed/'
+ds = TreeDatasetV1(data)
 x, y, z = ds[0]
-print(z.shape, z)
+
+print(x.shape)
