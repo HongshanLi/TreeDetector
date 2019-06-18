@@ -58,15 +58,22 @@ def _pixelwise_accuracy(output, target, threshold=0.5):
         
 class Logger(object):
     '''log the training process'''
-    def __init__(self, log_dir):
+    def __init__(self, log_dir, resume):
         '''
         Args:
             log_dir: directory to save the log file
         '''
         # read the log files if not the starting from 0 th 
         self.log_dir = log_dir
+        
+        if resume is not None:
+            log_path = os.path.join(log_dir, 'log.pickle')
+            with open(log_path, 'rb') as f:
+                self.log = pickle.load(f)
+        else:
+            self.log = {}
 
-        self.log = {}
+        print(self.log)
     
     def new_epoch(self,epoch):
         '''make log for new epoch'''
@@ -132,7 +139,8 @@ class Trainer(object):
         self.optimizer = optim.Adam(self.model.parameters(), 
                 lr=self.args.lr, weight_decay=1e-5)
 
-        self.logger = Logger(self.args.log_dir)
+        self.logger = Logger(log_dir=self.args.log_dir, 
+                resume=self.args.resume)
         return
 
     def total_steps(self):
@@ -171,7 +179,9 @@ class Trainer(object):
                 train_acc = train_acc + acc
 
                 if step % self.args.print_freq == 0:
-                    _print(epoch=epoch, epochs=self.args.epochs, 
+                    epochs = self.args.start_epoch + self.args.epochs-1
+
+                    _print(epoch=epoch, epochs=epochs, 
                             step=step, steps=self.total_steps,
                             loss=loss, acc=acc)
 
