@@ -160,6 +160,7 @@ class Trainer(object):
         train_loss = 0
         train_acc = 0
         for step, (feature, elv, mask) in enumerate(self.train_loader):
+            print(feature.shape)
             step = step + 1
             feature = feature.to(self.device)
             elv = elv.to(self.device)

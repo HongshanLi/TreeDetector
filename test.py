@@ -5,7 +5,6 @@ import time
 from dataset import TreeDataset
 from dataset import TreeDatasetV1
 
-import streamlit as st
 
 def main():
     tr.train_one_epoch()
@@ -29,7 +28,7 @@ def test_CocoMask(img_dir, annFile):
 #print(y.shape)
 #print(dark)
 
-data='/home/hongshan/data/Trees_processed/'
+data='/mnt/efs/Trees_processed/'
 ds = TreeDatasetV1(data)
 x, y, z = ds[0]
 

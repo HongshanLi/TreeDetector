@@ -2,10 +2,10 @@ import torch
 import torch.nn as nn
 import torchvision.models as models
 
-class 4to3(nn.Module):
+class PreFeature(nn.Module):
     '''Map 4 channels (RGBE) to 3 channels'''
     def __init__(self):
-        super(RGBPlusElv, self).__init__()
+        super(PreFeature, self).__init__()
         self.layers = nn.Sequential()
         conv1 = nn.Conv2d(4, 3, kernel_size=1,
                 stride=1,padding=0)
@@ -104,14 +104,13 @@ class Model(nn.Module):
 class ModelV1(nn.Module):
     '''use elvation image as an additional channel'''
     def __init__(self):
-        super(ModelV1, self).__init__():
-        self.4to3 = 4to3()
-        self.3_channel_model = Model().load_state_dict(
-            'ckps/model_20.pth')
+        super(ModelV1, self).__init__()
+        self.pre = PreFeature()
+        self.model = Model()
     
     def forward(self, x):
-        x = self.4to3(x)
-        x = 3_channel_model(x)
+        x = self.pre(x)
+        x = self.model(x)
         return x
 
 

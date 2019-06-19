@@ -403,9 +403,11 @@ class TreeDatasetV1(Dataset):
 
         if self.transform is not None:
             img  = self.transform(img)
+            print('img shape:', img.shape)
 
         if self.elv_transform is not None:
             elv = self.elv_transform(elv)
+            print('elv shape:', elv.shape)
 
         if self.mask_transform is not None:
             mask = self.mask_transform(mask)
