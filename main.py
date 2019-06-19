@@ -21,8 +21,8 @@ import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 import torchvision.models as models
 
-from dataset import TreeDataset
-from model import Model
+from dataset import TreeDataset, TreeDatasetV1
+from model import Model, ModelV1
 from criterion import Criterion
 from train_loop import Trainer
 
@@ -138,9 +138,11 @@ def main():
 
 
     if args.train:
-        train_dataset = TreeDataset(args.data, purpose='train')
-        val_dataset = TreeDataset(args.data, purpose='val')
-        model = Model()
+        train_dataset = TreeDatasetV1(args.data, purpose='train')
+        val_dataset = TreeDatasetV1(args.data, purpose='val')
+        model = ModelV1()
+        model.model.load_state_dict(torch.load('ckps/model_20.pth'))
+
         
         if args.resume is not None:
             model.load_state_dict(

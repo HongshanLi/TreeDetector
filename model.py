@@ -2,12 +2,23 @@ import torch
 import torch.nn as nn
 import torchvision.models as models
 
-class ElvFE(nn.Module):
-    '''Convnet to extract elevation features'''
+class PreFeature(nn.Module):
+    '''Map 4 channels (RGBE) to 3 channels'''
     def __init__(self):
-        super(ElvFE, self).__init__()
-        pass
+        super(PreFeature, self).__init__()
+        self.layers = nn.Sequential()
+        conv1 = nn.Conv2d(4, 3, kernel_size=1,
+                stride=1,padding=0)
+        bn1 = nn.BatchNorm2d(3)
+        act1 = nn.Sigmoid()
 
+        self.layers.add_module('conv1', conv1)
+        self.layers.add_module('bn1', bn1)
+        self.layers.add_module('act1', act1)
+
+    def forward(self, x):
+        return self.layers(x)
+        
 
 class ResNetFE(nn.Module):
     '''Resnet backbone for feature extraction'''
@@ -88,6 +99,18 @@ class Model(nn.Module):
     def forward(self, x):
         x = self.fe(x)
         x = self.mask(x)
+        return x
+
+class ModelV1(nn.Module):
+    '''use elvation image as an additional channel'''
+    def __init__(self):
+        super(ModelV1, self).__init__()
+        self.pre = PreFeature()
+        self.model = Model()
+    
+    def forward(self, x):
+        x = self.pre(x)
+        x = self.model(x)
         return x
 
 

@@ -72,8 +72,6 @@ class Logger(object):
                 self.log = pickle.load(f)
         else:
             self.log = {}
-
-        print(self.log)
     
     def new_epoch(self,epoch):
         '''make log for new epoch'''
