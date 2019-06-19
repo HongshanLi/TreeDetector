@@ -403,11 +403,9 @@ class TreeDatasetV1(Dataset):
 
         if self.transform is not None:
             img  = self.transform(img)
-            print('img shape:', img.shape)
 
         if self.elv_transform is not None:
             elv = self.elv_transform(elv)
-            print('elv shape:', elv.shape)
 
         if self.mask_transform is not None:
             mask = self.mask_transform(mask)
@@ -444,8 +442,6 @@ if __name__=='__main__':
         compute_mean_std(dataset)
         return
 
-
-    data_dir = '/mnt/efs/Trees_processed/'
-    ds = TreeDataset(data_dir,purpose='validate')
-    print(ds.file_names)
-
+    img_dir='/mnt/efs/Trees'
+    proc_dir = '/mnt/efs/Trees_processed/'
+    preprocess_imgs(img_dir, proc_dir)
