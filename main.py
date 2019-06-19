@@ -141,6 +141,8 @@ def main():
         train_dataset = TreeDatasetV1(args.data, purpose='train')
         val_dataset = TreeDatasetV1(args.data, purpose='val')
         model = ModelV1()
+        model.model.load_state_dict(torch.load('ckps/model_20.pth'))
+
         
         if args.resume is not None:
             model.load_state_dict(

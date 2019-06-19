@@ -1,12 +1,13 @@
 __pycache__/
 
 # model checkpoints
-ckps/
+*ckps/
 
 # any backup files
 *.bak/
 
-logs/
+# log files
+*logs/
 
 # tmp files
 tmp/
