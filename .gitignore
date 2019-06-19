@@ -9,7 +9,7 @@ ckps/
 logs/
 
 # tmp files
-./tmp/
+tmp/
 
 .streamlit/
 .ipynb_checkpoints
