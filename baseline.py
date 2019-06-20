@@ -49,26 +49,51 @@ if __name__=='__main__':
 
     baseline_acc = 0
     model_acc = 0
+
+    baseline_cm = {'TP':0, 'TN':0, 'FP': 0, 'FN':0}
+
+    model_cm = {'TP':0, 'TN':0, 'FP': 0, 'FN':0}
     for step, (img, _, mask) in enumerate(dataloader):
         img = img.to(device)
         mask = mask.to(device)
-        output = baseline(img)
+        output = baseline(mask)
 
         acc = utils.pixelwise_accuracy(output, mask)
-        baselline_acc = baseline_acc + acc
+        baseline_acc = baseline_acc + acc
+        
+        cm = utils.confusion_matrix(output, mask)
+
+        for key in cm.keys():
+            baseline_cm[key] = baseline_cm[key] + cm[key]
         
         with torch.no_grad():
             output = model(img)
         acc = utils.pixelwise_accuracy(output, mask)
         model_acc = model_acc + acc
-        
+        cm = utils.confusion_matrix(output, mask)
+
+        for key in cm.keys():
+            model_cm[key] = model_cm[key] + cm[key]
 
     baseline_acc = baseline_acc / (step + 1)
     model_acc = model_acc / (step + 1)
+
+    for key in cm.keys():
+        baseline_cm[key] = baseline_cm[key] / (step + 1)
+        model_cm[key] = model_cm[key] / (step + 1)
+
+    print("Baseline performance:")
+    print("Acc: {:0.2f}".format(baseline_acc))
+    for key in baseline_cm.keys():
+        print('{} : {:0.2f}'.format(key, baseline_cm[key]))
+
+    print("Model performance:")
+    print("Acc: {:0.2f}".format(model_acc))
+    for key in model_cm.keys():
+        print('{} : {:0.2f}'.format(key, model_cm[key]))
     
-    msg ="Baseline acc: {}".format(baseline_acc)
-    msg = msg + ' Model acc:{:0.2f}'.format(model_acc)
-    print(msg)
+
+    
 
 
 

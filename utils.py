@@ -10,29 +10,32 @@ def confusion_matrix(output, target, threshold=0.5):
 
     # Positive = Tree pixel
     tp = (predicted_mask == 0).float()*(1 - target)
-    tp = torch.sum(tp, dim=[1,2,3], keepdim=False)
+    tp = torch.sum(tp)
+    p = (target == 0).float()
+    p = torch.sum(p)
+    tp = tp / p
 
     tn = (predicted_mask == 1).float()*target
-    tn = torch.sum(tn, dim=[1,2,3], keepdim=False)
+    tn = torch.sum(tn)
+    n = (target == 1).float()
+    n = torch.sum(n)
+    tn = tn / n
 
     fp = (predicted_mask == 0).float()*target
-    fp = torch.sum(fp, dim=[1,2,3], keepdim=False)
+    fp = torch.sum(fp)
+    fp = fp / n
 
     fn = (predicted_mask == 1).float()*(1 - target)
-    fn = torch.sum(fn, dim=[1,2,3], keepdim=False)
-
-    total = torch.ones(output.shape[0]).fill_(250*250).to(device)
-
-    tp = torch.mean(tp / total)
-    tn = torch.mean(tn / total)
-    fp = torch.mean(fp / total)
-    fn = torch.mean(fn / total)
+    fn = torch.sum(fn)
+    fn = fn / p
     
-    cm = [tp, tn, fp, fn]
-    for i in range(4):
-        cm[i] = cm[i].cpu().item()
+    cm = {"TP": tp, "TN": tn, "FP": fp, "FN":fp}
+    for key in cm.keys():
+        cm[key] = cm[key].cpu().item()
 
-    return tuple(cm)
+    return cm
+
+    
 
     
 def pixelwise_accuracy(output, target, threshold=0.5):
@@ -44,8 +47,7 @@ def pixelwise_accuracy(output, target, threshold=0.5):
     '''
     predicted_mask = (output > threshold).float()
     correct = (predicted_mask == target).float()
-
-    acc = torch.sum(correct) / torch.sum(torch.ones(target.shape))
+    acc = torch.sum(correct) / torch.sum(torch.ones_like(target))
     acc = acc.cpu().item()
 
     return acc
