@@ -3,6 +3,7 @@ from torch.utils.data import DataLoader
 import torch.optim as optim
 import os
 import pickle
+import utils
 
 
 def _accuracy():
@@ -26,35 +27,24 @@ def _save_checkpoint(state_dict, ckp_path):
     
 
 # print out progress
-def _print(epoch, epochs, step, steps, loss, **kwargs):
+def _print(epoch, epochs, step, steps, **kwargs):
     '''
     Args:
         args: global arguments
     '''
     message = 'Epoch: [{}/{}] '.format(epoch, epochs)
     message = message + 'Step: [{}/{}] '.format(step, steps)
-    message = message + 'Loss: {:0.2f} '.format(loss)    
+    #message = message + 'Loss: {:0.2f} '.format(loss)    
     
     for k, v in kwargs.items():
-        message = message + "{}: {}".format(k, v)
+        message = message + " {}: {:0.2f} ".format(k, v)
 
     print(message)
 
     return message
 
-def _pixelwise_accuracy(output, target, threshold=0.5):
-    '''
-    Args: 
-        output: predicted mask
-        target: true mask
-        threshold: threshold to turn softmax into one-hot encode
-    '''
-    predicted_mask = (output > threshold).float()
-    correct = (predicted_mask == target).float()
 
-    acc = torch.sum(correct) / torch.sum(torch.ones(target.shape))
-    acc = acc.cpu().item()
-    return acc
+
         
 class Logger(object):
     '''log the training process'''
@@ -166,23 +156,27 @@ class Trainer(object):
             try:
                 self.optimizer.zero_grad()
                 output = self.model(feature)
-                loss = self.criterion(output, mask)
+                bg_l, tree_l= self.criterion(output, mask)
+                loss = bg_l + tree_l
                 loss.backward()
-                self.optimizer.step()            
+                self.optimizer.step()
+
                 loss = loss.detach().cpu().item()
-                acc = _pixelwise_accuracy(output, mask, 
+                acc = utils.pixelwise_accuracy(output, mask, 
                         threshold=self.args.threshold)
-                
+
                 train_loss = train_loss + loss
                 train_acc = train_acc + acc
 
                 if step % self.args.print_freq == 0:
                     epochs = self.args.start_epoch + self.args.epochs-1
-
+                    tp, tn, fp, fn = utils.confusion_matrix(output, 
+                        mask)
                     _print(epoch=epoch, epochs=epochs, 
                             step=step, steps=self.total_steps,
-                            loss=loss, acc=acc)
-
+                            loss=loss, acc=acc, tree_l=tree_l,
+                            bg_l=bg_l, tp=tp,
+                            tn=tn, fp=fp, fn=fn)
 
             # if KeyboardInterrupt happens during training
             # remove logs from current epoch and save the
@@ -194,7 +188,9 @@ class Trainer(object):
         
         train_loss = train_loss / self.total_steps
         train_acc = train_acc / self.total_steps
-        self.logger(epoch=epoch, train_loss=train_loss, train_acc=train_acc)
+        self.logger(epoch=epoch, 
+                train_loss=train_loss, 
+                train_acc=train_acc)
         self.save_ckp(epoch)
         return
     
@@ -211,9 +207,10 @@ class Trainer(object):
                 mask = mask.to(self.device)
 
                 output = self.model(feature)
-                loss = self.criterion(output, mask)
+                bg_l, tree_l = self.criterion(output, mask)
+                loss = bg_l + tree_l
                 
-                acc = _pixelwise_accuracy(output, mask, 
+                acc = utils.pixelwise_accuracy(output, mask, 
                     threshold=self.args.threshold)
 
                 val_loss = val_loss + loss.cpu().item()

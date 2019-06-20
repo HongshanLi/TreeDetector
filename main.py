@@ -26,21 +26,6 @@ from model import Model, ModelV1
 from criterion import Criterion
 from train_loop import Trainer
 
-
-"""Arguments:
-    num_workers
-    batch_size
-    start_epoch: which epoch to start
-    epochs: num of epochs to train
-    lr: learning rate
-    log_dir: directory to write log files
-    ckp_dir: directory to save checkpoints
-    print_step: num of step to print progess
-
-"""
-# automatically add ckp_dir to .gitignore
-# automatically add log_dir to .gitignore 
-
 #TODO give a list of possible pretrained models
 model_names = []
 
@@ -138,10 +123,9 @@ def main():
 
 
     if args.train:
-        train_dataset = TreeDatasetV1(args.data, purpose='train')
-        val_dataset = TreeDatasetV1(args.data, purpose='val')
-        model = ModelV1()
-        model.model.load_state_dict(torch.load('ckps/model_20.pth'))
+        train_dataset = TreeDataset(args.data, purpose='train')
+        val_dataset = TreeDataset(args.data, purpose='val')
+        model = Model()
 
         
         if args.resume is not None:
@@ -180,12 +164,6 @@ def main():
                 min_loss = eplog['val_loss']
                 best_model = epoch
         print("best model is : model_{}.pth".format(best_model))
-
-
-
-            
-
-
 
 
 if __name__=="__main__":
