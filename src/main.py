@@ -5,6 +5,7 @@ from shutil import copyfile
 import time
 import warnings
 import pickle
+import scipy.misc
 
 import torch
 import torch.nn as nn
@@ -21,10 +22,12 @@ import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 import torchvision.models as models
 
-from dataset import TreeDataset, TreeDatasetV1
-from model import Model, ModelV1
+from dataset import TreeDataset, TreeDatasetInf
+from model import Model
 from criterion import Criterion
 from train_loop import Trainer
+from post_process import CleanUp
+import evaluate
 
 #TODO give a list of possible pretrained models
 model_names = []
@@ -54,7 +57,7 @@ parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
 parser.add_argument('--wd', '--weight-decay', default=1e-4, type=float,
                     metavar='W', help='weight decay (default: 1e-4)',
                     dest='weight_decay')
-parser.add_argument('-p', '--print-freq', default=10, type=int,
+parser.add_argument('--print-freq', default=10, type=int,
                     metavar='N', help='print frequency (default: 10)')
 parser.add_argument('--start-epoch', dest='start_epoch', type=int,
                     metavar='N', help='epoch to start training')
@@ -67,10 +70,9 @@ parser.add_argument('--ckp-dir', default='./ckps', type=str, metavar="PATH",
 
 parser.add_argument('--train', dest='train', action='store_true', 
                     help='train the model')
+
 parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
                     help='evaluate model on validation set')
-parser.add_argument('--pretrained', dest='pretrained', action='store_true',
-                    help='use pre-trained model')
 parser.add_argument('--find-best-model', dest='find_best_model', 
         action='store_true', help='find the best model from the ckp')
 
@@ -98,28 +100,75 @@ parser.add_argument('-t', '--threshold', dest='threshold',
         type=float, default=0.5, 
         help='threshold to convert softmax to one-hot encode')
 
+# prediction
+parser.add_argument('-p', '--predict', dest='predict', 
+        action='store_true', help='predict mask on aerial imgs')
+parser.add_argument('--model-ckp', type=str, metavar="PATH",
+        help='path to the model ckp')
+parser.add_argument('--images', type=str, 
+        metavar="PATH",
+        help='dir to store imgs to be masked')
+parser.add_argument('--mask-dir', type=str, metavar="PATH",
+        default='./masks',
+        help='dir to save mask')
+
+    
 def main():
     args = parser.parse_args()
+    device = torch.device('cuda:0' if torch.cuda.is_available()
+            else 'cpu')
 
     if not os.path.isdir(args.ckp_dir):
         os.mkdir(args.ckp_dir)
 
     if not os.path.isdir(args.log_dir):
         os.mkdir(args.log_dir)
-
     
-    '''
-    validator = Validator(val_dataset=val_dataset, model=model, 
-            criterion=criterion, args=args)
-    '''
+    if not os.path.isdir(args.mask_dir):
+        os.mkdir(args.mask_dir)
+
+    if args.predict:
+        if args.images is None:
+            raise TypeError("you need to specify image dir")
+        with torch.no_grad():
+            model = Model()
+            model.load_state_dict(torch.load(
+                os.path.join(args.model_ckp), 
+                map_location=device,
+                ))
+            model = model.to(device)
+
+            ds = TreeDatasetInf(args.images)
+            cleanup = CleanUp()
+            for i in range(len(ds)):
+                img, img_name = ds[i]
+                img = img.unsqueeze(0)
+                img = img.to(device)
+                mask = model(img)
+                mask = mask.view(250, 250)
+                mask = mask.cpu().numpy()
+                
+                mask = cleanup(mask)
+
+                scipy.misc.imsave(
+                        os.path.join(args.mask_dir, img_name), mask
+                        )
+        
+        return
 
     if args.evaluate:
-        # print some stuff to show model size
-        # GPU memories need to hold the model
-        # amount of data 
-        # print total training steps for one epoch
+        # evaluate performance of the model
+        test_dataset = TreeDataset(args.data, purpose='test')
+        model = Model()
+        model.load_state_dict(
+                torch.load(args.model_ckp, map_location=device))
+        model = model.to(device)
+        evaluate.evaluate_model(test_dataset, model, 
+                threshold=args.threshold, device=device, 
+                batch_size=args.batch_size)
+        return 
 
-        return
+
 
 
     if args.train:

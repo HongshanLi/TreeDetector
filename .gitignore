@@ -14,3 +14,9 @@ tmp/
 
 .streamlit/
 .ipynb_checkpoints
+
+# images to predict
+./images
+
+# predicted masks
+./masks
