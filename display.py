@@ -7,11 +7,11 @@ import skimage.io as io
 parser = argparse.ArgumentParser(
         description='Disply images and predicted masks')
 parser.add_argument('--images', type=str, metavar='PATH',
-        default='./images')
+        default='/mnt/efs/tmp_images')
 parser.add_argument('--mask-dir', type=str, metavar='PATH',
-        default='./masks')
+        default='/mnt/efs/tmp_masks')
 parser.add_argument('--gth-mask-dir', type=str, metavar='PATH',
-        default='./gth_masks', help='dir to ground truth masks')
+        default='/mnt/efs/tmp_masks', help='dir to ground truth masks')
 
 args = parser.parse_args()
 

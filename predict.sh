@@ -2,5 +2,6 @@
 
 dirname=$(pwd)
 python $dirname/src/main.py --predict --model-ckp=$dirname/ckps/model_10.pth \
-        --images=$dirname/images --mask-dir=$dirname/masks
+        --images=/mnt/efs/tmp_images --mask-dir=/mnt/efs/tmp_masks
+
 

@@ -145,7 +145,9 @@ def main():
                 img = img.unsqueeze(0)
                 img = img.to(device)
                 mask = model(img)
-                mask = mask.view(250, 250)
+                _,_,h,w = mask.shape
+
+                mask = mask.view(h, w)
                 mask = mask.cpu().numpy()
                 
                 mask = cleanup(mask)
