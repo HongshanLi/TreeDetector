@@ -8,20 +8,11 @@ from torch.utils.data import Dataset, DataLoader
 import torchvision.datasets as ds
 import torchvision.transforms as transforms
 
-#from torchvision.datasets import VisionDataset
 import numpy as np
 import PIL.Image as Image
 import os
 import skimage.io as io
 import random
-
-img_dir='/home/hongshan/data/train2017'
-annFile='/home/hongshan/data/annotations/instances_train2017.json'
-
-
-# for the img, pad to 640 then centercrop to 608
-# create the mask for the untransformed img, then
-# pad to 640 and centercrop to 608
 
 
 def _create_img_ids(img_dir):
@@ -49,12 +40,9 @@ def preprocess_imgs(img_dir, out_dir):
     if not os.path.isdir(out_dir):
         try:
             os.makedirs(os.path.join(out_dir, 'imgs/'))
-            os.makedirs(os.path.join(out_dir, 'elevations/'))
             os.makedirs(os.path.join(out_dir, 'masks/'))
         except OSError as e:
             print(e)
-
-    
 
     img_ids = _create_img_ids(img_dir)
     
@@ -66,23 +54,17 @@ def preprocess_imgs(img_dir, out_dir):
         # rgb
         img_rgb = img_id + "_RGB-Ir.tif"
         
-        # elvation img
-        img_elv = img_id + "_DSM.tif"
-        
         # mask
         img_mask = img_id + "_TREE.png"
         
         img_path = os.path.join(img_dir, 
                 img_sfd, img_id, img_rgb)
 
-        elv_path = os.path.join(img_dir,
-                img_sfd, img_id, img_elv)
 
         mask_path = os.path.join(img_dir,
                 img_sfd, img_id, img_mask)
 
         img = io.imread(img_path)
-        elv = io.imread(elv_path)
         mask = io.imread(mask_path)
         
         # divid into subimgs and save 
@@ -93,9 +75,6 @@ def preprocess_imgs(img_dir, out_dir):
                 
                 sub_img = img[start_x:end_x, start_y:end_y,0:3]
 
-                # elv img only has one channel
-                sub_elv = elv[start_x:end_x, start_y:end_y]
-
                 sub_mask = mask[start_x:end_x, start_y:end_y,0:3]
                 
                 idx = '{}_{}'.format(i,j)
@@ -104,11 +83,6 @@ def preprocess_imgs(img_dir, out_dir):
                 # save img
                 Image.fromarray(sub_img).save(
                         os.path.join(out_dir, 'imgs/', file_name)
-                        )
-
-                # save elv
-                Image.fromarray(sub_elv).save(
-                        os.path.join(out_dir, 'elevations/', file_name)
                         )
 
                 # save mask
