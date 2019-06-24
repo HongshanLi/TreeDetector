@@ -3,8 +3,8 @@ ROOT=$(pwd)
 
 python src/main.py  --train --pretrained \
         --root=$ROOT --learning-rate=0.0001 --batch-size=1 \
-        --log-dir=$ROOT/tmp --ckp-dir=$ROOT/tmp\
-        --print-freq=1
+        --log-dir=$ROOT/tmp --ckp-dir=$ROOT/tmp \
+        --print-freq=1 --epochs=1
 
 # stop the instance after training
 

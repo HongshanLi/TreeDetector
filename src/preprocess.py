@@ -47,14 +47,14 @@ def divide_raw_imgs_masks(config, **kwargs):
             # process one image
             img_path, mask_path = path[0], path[1]
             img, mask=io.imread(img_path), io.imread(mask_path)
-            
+
             for j in range(num_hor):
                 for k in range(num_ver):
                     start_x, end_x = j*pw, (j+1)*pw
                     start_y, end_y = k*ph, (k+1)*ph
                     
                     sub_img = img[start_x:end_x, start_y:end_y,0:3]
-                    sub_mask = mask[start_x:end_x, start_y:end_y,0]
+                    sub_mask = mask[start_x:end_x, start_y:end_y,1]
                     
                     file_name = "{}_{}_{}.png".format(i, j, k)
 

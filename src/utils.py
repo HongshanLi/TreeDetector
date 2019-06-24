@@ -2,9 +2,10 @@ import torch
 
 device = torch.device("cuda:0" if torch.cuda.is_available()
         else "cpu")
+
 def confusion_matrix(output, target, threshold=0.5):
     '''confusion matrix for binary classfier'''
-
+    print('sum of target pixels:', torch.sum(target))
     # In target, 0 means tree 1 means bg
     predicted_mask = (output > threshold).float()
 

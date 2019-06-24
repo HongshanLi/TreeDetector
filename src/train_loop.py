@@ -149,13 +149,13 @@ class Trainer(object):
 
                 if step % self.args.print_freq == 0:
                     epochs = self.args.start_epoch + self.args.epochs-1
-                    tp, tn, fp, fn = utils.confusion_matrix(output, 
-                        mask)
+                    cm = utils.confusion_matrix(output, mask)
+
                     _print(epoch=epoch, epochs=epochs, 
                             step=step, steps=self.total_steps,
                             loss=loss, acc=acc, tree_l=tree_l,
-                            bg_l=bg_l, tp=tp,
-                            tn=tn, fp=fp, fn=fn)
+                            bg_l=bg_l, TP=cm['TP'], TN=cm['TN'],
+                            FP=cm['FP'], FN=cm['FN'])
 
             # if KeyboardInterrupt happens during training
             # remove logs from current epoch and save the

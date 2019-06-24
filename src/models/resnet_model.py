@@ -2,8 +2,6 @@ import torch
 import torch.nn as nn
 import torchvision.models as models
 
-        
-
 class ResNetFE(nn.Module):
     '''Resnet backbone for feature extraction'''
     def __init__(self, pretrained):
@@ -21,7 +19,6 @@ class ResNetFE(nn.Module):
         x = self.resnet.layer3(x)
         x = self.resnet.layer4(x)
         return x
-
 
 class Mask(nn.Module):
     '''create mask of trees for each input img'''
@@ -71,10 +68,10 @@ class Mask(nn.Module):
         return x
 
 
-class Model(nn.Module):
+class ResNetModel(nn.Module):
     '''final model for creating tree mask for 2d RGB images'''
     def __init__(self, pretrained):
-        super(Model, self).__init__()
+        super(ResNetModel, self).__init__()
         
         # feature extractor
         self.fe = ResNetFE(pretrained)
@@ -84,6 +81,7 @@ class Model(nn.Module):
         x = self.fe(x)
         x = self.mask(x)
         return x
+
 
 
 

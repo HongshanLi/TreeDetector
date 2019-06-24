@@ -26,7 +26,7 @@ import torchvision.models as models
 
 import preprocess 
 from dataset import TreeDataset, TreeDatasetInf
-from model import Model
+from models import ResNetModel
 from criterion import Criterion
 from train_loop import Trainer
 from post_process import CleanUp
@@ -74,7 +74,8 @@ parser.add_argument('--wd', '--weight-decay', default=1e-4, type=float,
 parser.add_argument('--print-freq', default=10, type=int,
                     metavar='N', help='print frequency (default: 10)')
 parser.add_argument('--start-epoch', dest='start_epoch', type=int,
-                    metavar='N', help='epoch to start training')
+                    default=1, metavar='N', 
+                    help='epoch to start training')
 parser.add_argument('--resume', dest='resume', metavar='PATH',
                     help='resume training from a checkpoint')
 parser.add_argument('--log-dir', default='./logs', type=str, metavar="PATH",
@@ -105,11 +106,13 @@ parser.add_argument('--mask-dir', type=str, metavar="PATH",
         default='./masks',
         help='dir to save mask')
 
-    
+
+
+device = torch.device('cuda:0' if torch.cuda.is_available()
+     else 'cpu')
+
 def main():
     args = parser.parse_args()
-    device = torch.device('cuda:0' if torch.cuda.is_available()
-            else 'cpu')
     
     config_file=os.path.join(args.root, 'config', "config.json")
     with open(config_file, 'r') as f:
@@ -133,40 +136,13 @@ def main():
         preprocess.compute_mean_std(config, root_dir=args.root)
 
     if args.predict:
-        if args.images is None:
-            raise TypeError("you need to specify image dir")
-        with torch.no_grad():
-            model = Model()
-            model.load_state_dict(torch.load(
-                os.path.join(args.model_ckp), 
-                map_location=device,
-                ))
-            model = model.to(device)
+        predict(args)
 
-            ds = TreeDatasetInf(args.images)
-            cleanup = CleanUp()
-            for i in range(len(ds)):
-                img, img_name = ds[i]
-                img = img.unsqueeze(0)
-                img = img.to(device)
-                mask = model(img)
-                _,_,h,w = mask.shape
-
-                mask = mask.view(h, w)
-                mask = mask.cpu().numpy()
-                
-                mask = cleanup(mask)
-
-                scipy.misc.imsave(
-                        os.path.join(args.mask_dir, img_name), mask
-                        )
-        
-        return
 
     if args.evaluate:
-        # evaluate performance of the model
+        # evaluate performance of the model on test set
         test_dataset = TreeDataset(args.data, purpose='test')
-        model = Model()
+        model = ResNetModel(pretrained=False)
         model.load_state_dict(
                 torch.load(args.model_ckp, map_location=device))
         model = model.to(device)
@@ -191,6 +167,43 @@ def main():
                 best_model = epoch
         print("best model is : model_{}.pth".format(best_model))
 
+
+def predict(args):
+    if args.images is None:
+        raise TypeError("you need to specify image dir")
+    with torch.no_grad():
+        model = ResNetModel(pretrained=False)
+        model.load_state_dict(torch.load(
+            os.path.join(args.model_ckp), 
+            map_location=device,
+            ))
+        model = model.to(device)
+
+        transform = transforms.Compose([
+            transforms.ToTensor(),
+            # @TODO add normalization here
+            ])
+
+        ds = TreeDatasetInf(args.images, transform=transform)
+        cleanup = CleanUp()
+        for i in range(len(ds)):
+            img, img_name = ds[i]
+            img = img.unsqueeze(0)
+            img = img.to(device)
+            mask = model(img)
+            _,_,h,w = mask.shape
+
+            mask = mask.view(h, w)
+            mask = mask.cpu().numpy()
+            
+            mask = cleanup(mask)
+
+            scipy.misc.imsave(
+                    os.path.join(args.mask_dir, img_name), mask
+                    )
+    
+    return
+
 def train(config, args):
     transform, mask_transform = get_transform(
             config, proj_root=args.root)
@@ -207,7 +220,7 @@ def train(config, args):
             purpose='val')
 
     
-    model = Model(args.pretrained)   
+    model = ResNetModel(args.pretrained)   
     if args.resume is not None:
         model.load_state_dict(
                 torch.load(os.path.join(
@@ -243,7 +256,6 @@ def get_transform(config, **kwargs):
         mean_std = json.load(f)
 
     transform = transforms.Compose([
-        transforms.ToPILImage(),
         transforms.ToTensor(),
         transforms.Normalize(
             tuple(mean_std['mean']),
