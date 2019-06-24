@@ -6,6 +6,8 @@ import time
 import warnings
 import pickle
 import scipy.misc
+import json
+
 
 import torch
 import torch.nn as nn
@@ -22,6 +24,7 @@ import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 import torchvision.models as models
 
+import preprocess 
 from dataset import TreeDataset, TreeDatasetInf
 from model import Model
 from criterion import Criterion
@@ -32,9 +35,17 @@ import evaluate
 #TODO give a list of possible pretrained models
 model_names = []
 
-parser = argparse.ArgumentParser(description='PyTorch Model For Segmenting Trees')
+parser = argparse.ArgumentParser(
+        description='PyTorch Model For Segmenting Trees')
+parser.add_argument('--root', metavar='DIR', required=True,
+        help='project root directory')
+
+parser.add_argument('--preprocess', action='store_true',
+        help='preprocess raw data')
+
 parser.add_argument('--data', metavar='DIR', required=False,
-                    help='path to dataset')
+                    help='path to processed dataset')
+
 parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
                     choices=model_names,
                     help='model architecture: ' +
@@ -45,12 +56,15 @@ parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
 parser.add_argument('--epochs', default=90, type=int, metavar='N',
                     help='number of total epochs to run')
 
-parser.add_argument('-b', '--batch-size', default=256, type=int,
+
+parser.add_argument('--train', action='store_true', 
+                    help='train the model')
+parser.add_argument('--pretrained', action='store_true',
+                    help="use pretrained resnet152")
+parser.add_argument('--batch-size', default=256, type=int,
                     metavar='N',
-                    help='mini-batch size (default: 256), this is the total '
-                         'batch size of all GPUs on the current node when '
-                         'using Data Parallel or Distributed Data Parallel')
-parser.add_argument('--lr', '--learning-rate', default=0.1, type=float,
+                    help='batch size')
+parser.add_argument('--learning-rate', default=0.1, type=float,
                     metavar='LR', help='initial learning rate', dest='lr')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
@@ -68,32 +82,11 @@ parser.add_argument('--log-dir', default='./logs', type=str, metavar="PATH",
 parser.add_argument('--ckp-dir', default='./ckps', type=str, metavar="PATH",
                     help='checkpoint directory')
 
-parser.add_argument('--train', dest='train', action='store_true', 
-                    help='train the model')
 
 parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
                     help='evaluate model on validation set')
 parser.add_argument('--find-best-model', dest='find_best_model', 
         action='store_true', help='find the best model from the ckp')
-
-
-parser.add_argument('--world-size', default=-1, type=int,
-                    help='number of nodes for distributed training')
-parser.add_argument('--rank', default=-1, type=int,
-                    help='node rank for distributed training')
-parser.add_argument('--dist-url', default='tcp://224.66.41.62:23456', type=str,
-                    help='url used to set up distributed training')
-parser.add_argument('--dist-backend', default='nccl', type=str,
-                    help='distributed backend')
-parser.add_argument('--seed', default=None, type=int,
-                    help='seed for initializing training. ')
-parser.add_argument('--gpu', default=None, type=int,
-                    help='GPU id to use.')
-parser.add_argument('--multiprocessing-distributed', action='store_true',
-                    help='Use multi-processing distributed training to launch '
-                         'N processes per node, which has N GPUs. This is the '
-                         'fastest way to use PyTorch for either single node or '
-                         'multi node data parallel training')
 
 # evaluation
 parser.add_argument('-t', '--threshold', dest='threshold',
@@ -117,6 +110,10 @@ def main():
     args = parser.parse_args()
     device = torch.device('cuda:0' if torch.cuda.is_available()
             else 'cpu')
+    
+    config_file=os.path.join(args.root, 'config', "config.json")
+    with open(config_file, 'r') as f:
+        config = json.load(f)
 
     if not os.path.isdir(args.ckp_dir):
         os.mkdir(args.ckp_dir)
@@ -126,6 +123,14 @@ def main():
     
     if not os.path.isdir(args.mask_dir):
         os.mkdir(args.mask_dir)
+
+    if args.preprocess:
+        #@TODO put whether to redo proprocess logic here
+
+        print('dividing raw images into subimages...')
+        preprocess.divide_raw_imgs_masks(config, root_dir=args.root)
+        print('computing mean and standard deviation for the dataset...')
+        preprocess.compute_mean_std(config, root_dir=args.root)
 
     if args.predict:
         if args.images is None:
@@ -170,38 +175,8 @@ def main():
                 batch_size=args.batch_size)
         return 
 
-
-
-
     if args.train:
-        train_dataset = TreeDataset(args.data, purpose='train')
-        val_dataset = TreeDataset(args.data, purpose='val')
-        model = Model()
-
-        
-        if args.resume is not None:
-            model.load_state_dict(
-                    torch.load(os.path.join(
-                        args.ckp_dir, args.resume)))
-
-            # start from the end epoch of the previous 
-            # training loop
-            if args.start_epoch is not None:
-                start_epoch = args.start_epoch
-            else:
-                start_epoch=len(os.listdir(args.ckp_dir))
-        else:
-            start_epoch=1
-
-        criterion = Criterion()
-        trainer = Trainer(train_dataset=train_dataset,
-                val_dataset=val_dataset, 
-                model=model, criterion=criterion, args=args)
-
-        for epoch in range(start_epoch, start_epoch + args.epochs):
-            trainer(epoch)
-            trainer.validate(epoch)
-            trainer.logger.save_log()
+        train(config, args)
 
     if args.find_best_model:
         # find the best models from checkpoint
@@ -215,6 +190,70 @@ def main():
                 min_loss = eplog['val_loss']
                 best_model = epoch
         print("best model is : model_{}.pth".format(best_model))
+
+def train(config, args):
+    transform, mask_transform = get_transform(
+            config, proj_root=args.root)
+    
+    # full dir for processed data
+    proc_data = os.path.join(args.root, config['proc_data'])
+
+    train_dataset = TreeDataset(proc_data,
+            transform=transform, mask_transform=mask_transform,
+            purpose='train')
+
+    val_dataset = TreeDataset(proc_data, 
+            transform=transform, mask_transform=mask_transform,
+            purpose='val')
+
+    
+    model = Model(args.pretrained)   
+    if args.resume is not None:
+        model.load_state_dict(
+                torch.load(os.path.join(
+                    args.ckp_dir, args.resume)))
+
+        # start from the end epoch of the previous 
+        # training loop
+        if args.start_epoch is not None:
+            start_epoch = args.start_epoch
+        else:
+            start_epoch=len(os.listdir(args.ckp_dir))
+    else:
+        start_epoch=1
+
+    criterion = Criterion()
+    trainer = Trainer(train_dataset=train_dataset,
+            val_dataset=val_dataset, 
+            model=model, criterion=criterion, args=args)
+
+    for epoch in range(start_epoch, start_epoch + args.epochs):
+        trainer(epoch)
+        trainer.validate(epoch)
+        trainer.logger.save_log()
+    return 
+
+
+def get_transform(config, **kwargs):
+    proj_root=kwargs['proj_root']
+
+    # get mean and std of the dataset
+    mean_std_path = os.path.join(proj_root, config['mean_std'])
+    with open(mean_std_path, 'r') as f:
+        mean_std = json.load(f)
+
+    transform = transforms.Compose([
+        transforms.ToPILImage(),
+        transforms.ToTensor(),
+        transforms.Normalize(
+            tuple(mean_std['mean']),
+            tuple(mean_std['std'])
+            )])
+    mask_transform = transforms.Compose([
+        transforms.ToTensor(),
+        ])
+    return transform, mask_transform
+
 
 
 if __name__=="__main__":

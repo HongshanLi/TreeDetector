@@ -15,26 +15,15 @@ import skimage.io as io
 import random
 
 
-    
-transform = transforms.Compose([
-    transforms.ToPILImage(),
-    transforms.ToTensor(),
-    transforms.Normalize(
-        (0.4137, 0.4233, 0.3968),
-        (0.2275, 0.2245, 0.2424))
-    ])
-
-elv_transform = transforms.Compose([
-    transforms.ToPILImage(),
-    transforms.ToTensor()])
-
-mask_transform = transforms.Compose([
-    transforms.ToPILImage(),
-    transforms.ToTensor()])
-
 class TreeDataset(Dataset):
-    def __init__(self, proc_dir, transform=transform, 
-        mask_transform=mask_transform, purpose='train'):
+    def __init__(self, proc_dir, transform, mask_transform, 
+            purpose='train'):
+        '''
+        Args:
+            proc_dir: directory for processed data
+            transform: transforms applied to imgs
+            mask_transform: transforms applied to masks
+        '''
         
         # get a list of img files
         self.proc_dir = proc_dir
@@ -100,7 +89,7 @@ class TreeDataset(Dataset):
         
         if self.mask_transform is not None:
             mask = self.mask_transform(mask)
-            mask = mask[1,:,:].view(1,250,250)
+            mask = mask.view(1,250,250)
 
         return img, mask
     
@@ -111,7 +100,7 @@ class TreeDataset(Dataset):
 
 class TreeDatasetInf(Dataset):
     '''Data fetch pipeline for inference'''
-    def __init__(self, img_dir, transform=transform):
+    def __init__(self, img_dir, transform):
         self.img_dir = img_dir
         self.img_names = os.listdir(img_dir)
         self.transform = transform

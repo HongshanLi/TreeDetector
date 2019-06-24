@@ -6,25 +6,9 @@ import pickle
 import utils
 
 
-def _accuracy():
-    return
-
-def _top_one_accuracy():
-    return
-
-def _top_five_accuracy():
-    return
-
-
-# for regression related tasks
-
-
-
-# checkpoints
 def _save_checkpoint(state_dict, ckp_path):
     torch.save(state_dict, ckp_path)
     return
-    
 
 # print out progress
 def _print(epoch, epochs, step, steps, **kwargs):
@@ -42,10 +26,6 @@ def _print(epoch, epochs, step, steps, **kwargs):
     print(message)
 
     return message
-
-
-
-        
 class Logger(object):
     '''log the training process'''
     def __init__(self, log_dir, resume):
@@ -147,10 +127,9 @@ class Trainer(object):
 
         train_loss = 0
         train_acc = 0
-        for step, (feature, elv, mask) in enumerate(self.train_loader):
+        for step, (feature, mask) in enumerate(self.train_loader):
             step = step + 1
             feature = feature.to(self.device)
-            elv = elv.to(self.device)
             mask = mask.to(self.device)
 
             try:
@@ -201,7 +180,7 @@ class Trainer(object):
             val_loss = 0
             val_acc = 0
 
-            for step, (feature, elv, mask) in enumerate(self.val_loader):
+            for step, (feature, mask) in enumerate(self.val_loader):
                 step = step + 1
                 feature = feature.to(self.device)
                 mask = mask.to(self.device)

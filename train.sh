@@ -1,8 +1,10 @@
 #!/bin/bash
-python main.py --data=/mnt/efs/Trees_processed/ -j=2 --lr=0.0001 -b=16 \
-        --print-freq=10 --train --resume=model_10.pth \
-        --start-epoch=11 --epochs=1 --ckp-dir=ckps/ \
-        --log-dir=logs/ 
+ROOT=$(pwd)
+
+python src/main.py  --train --pretrained \
+        --root=$ROOT --learning-rate=0.0001 --batch-size=1 \
+        --log-dir=$ROOT/tmp --ckp-dir=$ROOT/tmp\
+        --print-freq=1
 
 # stop the instance after training
 

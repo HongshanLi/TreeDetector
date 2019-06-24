@@ -2,27 +2,11 @@ import torch
 import torch.nn as nn
 import torchvision.models as models
 
-class PreFeature(nn.Module):
-    '''Map 4 channels (RGBE) to 3 channels'''
-    def __init__(self):
-        super(PreFeature, self).__init__()
-        self.layers = nn.Sequential()
-        conv1 = nn.Conv2d(4, 3, kernel_size=1,
-                stride=1,padding=0)
-        bn1 = nn.BatchNorm2d(3)
-        act1 = nn.Sigmoid()
-
-        self.layers.add_module('conv1', conv1)
-        self.layers.add_module('bn1', bn1)
-        self.layers.add_module('act1', act1)
-
-    def forward(self, x):
-        return self.layers(x)
         
 
 class ResNetFE(nn.Module):
     '''Resnet backbone for feature extraction'''
-    def __init__(self, pretrained=True):
+    def __init__(self, pretrained):
         super(ResNetFE, self).__init__()
         self.resnet = models.resnet152(pretrained=pretrained)
     
@@ -89,11 +73,11 @@ class Mask(nn.Module):
 
 class Model(nn.Module):
     '''final model for creating tree mask for 2d RGB images'''
-    def __init__(self):
+    def __init__(self, pretrained):
         super(Model, self).__init__()
         
         # feature extractor
-        self.fe = ResNetFE()
+        self.fe = ResNetFE(pretrained)
         self.mask = Mask()
     
     def forward(self, x):
@@ -101,22 +85,5 @@ class Model(nn.Module):
         x = self.mask(x)
         return x
 
-class ModelV1(nn.Module):
-    '''use elvation image as an additional channel'''
-    def __init__(self):
-        super(ModelV1, self).__init__()
-        self.pre = PreFeature()
-        self.model = Model()
-    
-    def forward(self, x):
-        x = self.pre(x)
-        x = self.model(x)
-        return x
 
-
-if __name__=='__main__':
-    m = Model()
-    x = torch.Tensor(2, 3, 250, 250)
-    y = m(x)
-    print(y.shape)
 
