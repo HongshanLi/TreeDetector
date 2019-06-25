@@ -5,8 +5,7 @@ import torch
 
 def visualize_model(model):
     x = torch.zeros(1, 3, 250, 250)
-    resnet = ResNetModel(pretrained=False)
-    y = resnet(x)
+    y = model(x)
     dg = make_dot(y)
     file_name = model.model_name + "_model.gv"
     dg.render(
