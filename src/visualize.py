@@ -7,8 +7,8 @@ def visualize_model():
     model = ResNetModel(pretrained=False)
     y = model(x)
     dg = make_dot(y)
-    dg.render('test.gv', view=True)
-
+    dg.render('../plots/resnet_model.gv', view=False)
+    return
 
 if __name__=='__main__':
     visualize_model()
