@@ -1,14 +1,21 @@
+import os
 from torchviz import make_dot
-from models import ResNetModel
+from models import ResNetModel, UNet
 import torch
 
-def visualize_model():
+def visualize_model(model):
     x = torch.zeros(1, 3, 250, 250)
-    model = ResNetModel(pretrained=False)
-    y = model(x)
+    resnet = ResNetModel(pretrained=False)
+    y = resnet(x)
     dg = make_dot(y)
-    dg.render('../plots/resnet_model.gv', view=False)
-    return
+    file_name = model.model_name + "_model.gv"
+    dg.render(
+            os.path.join('../plots/', file_name)
+            )
+    return     
 
 if __name__=='__main__':
-    visualize_model()
+    resnet=ResNetModel(pretrained=False)
+    unet=UNet()
+    visualize_model(resnet)
+    visualize_model(unet)

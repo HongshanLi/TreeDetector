@@ -72,7 +72,8 @@ class ResNetModel(nn.Module):
     '''final model for creating tree mask for 2d RGB images'''
     def __init__(self, pretrained):
         super(ResNetModel, self).__init__()
-        
+        self.model_name='resnet'
+
         # feature extractor
         self.fe = ResNetFE(pretrained)
         self.mask = Mask()

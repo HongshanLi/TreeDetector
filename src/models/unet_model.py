@@ -7,6 +7,7 @@ from .unet_parts import *
 class UNet(nn.Module):
     def __init__(self, n_channels=3, n_classes=1):
         super(UNet, self).__init__()
+        self.model_name = 'unet'
         self.inc = inconv(n_channels, 64)
         self.down1 = down(64, 128)
         self.down2 = down(128, 256)
