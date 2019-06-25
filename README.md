@@ -50,6 +50,11 @@ and `proc_data/masks/` and you create a json file containing
 }
 ```
 
+## Model
+### ResNetModel
+
+### UNet
+
 ## Train
 Once you have the preprocessed data ready in `proc_data/`, to train the model,
 run
@@ -74,11 +79,7 @@ Log of the whole training process will be saved at `--log-dir` as
 ## Evaluate
 To find the checkpoint with the best validation accuracy, do
 ```
-python src/main.py --find-best-model
-```
-If you changed `--log-dir` flag in training, you need to specify it here as well
-```
-python src/main.py --find-best-model --log-dir=[dir to the log]
+python src/main.py --find-best-model --log-dir=[dir to the log file]
 ```
 
 To evaluate the model performance on test set, do

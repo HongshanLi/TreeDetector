@@ -32,7 +32,6 @@ from train_loop import Trainer
 from post_process import CleanUp
 from evaluate import evaluate_model
 
-#TODO give a list of possible pretrained models
 model_names = ['resnet', 'unet']
 
 parser = argparse.ArgumentParser(
@@ -44,14 +43,11 @@ parser.add_argument('--root', metavar='DIR', required=True,
 parser.add_argument('--preprocess', action='store_true',
         help='preprocess raw data')
 
-parser.add_argument('--data', metavar='DIR', required=False,
-                    help='path to processed dataset')
-
 parser.add_argument('--model', metavar='MODEL', default='resnet',
                     choices=model_names,
                     help='model architecture: ' +
                         ' | '.join(model_names) +
-                        ' (default: resnet18)')
+                        ' (default: resnet)')
 parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
 parser.add_argument('--epochs', default=90, type=int, metavar='N',
@@ -131,34 +127,39 @@ def main(args, model, config):
         print('computing mean and standard deviation for the dataset...')
         preprocess.compute_mean_std(config, root_dir=args.root)
 
+    # make inference on images
     if args.predict:
-        predict(args)
+        predict(args=args, model=model)
 
+    # evaluate model performance on test set
     if args.evaluate:
-        evaluate(args=args, model=model)
-        # evaluate performance of the model on test set
+        evaluate(args=args, config=config, model=model)
 
+    # train the model
     if args.train:
-        train(config, args)
+        train(args=args, config=config, model=model)
 
     # find the best model from the ckps
     if args.find_best_model:
         find_best_model(args)
 
-        logpath = os.path.join(args.log_dir, 'log.pickle')
-        with open(logpath, 'rb') as f:
-            log = pickle.load(f)
-        best_model = 1
-        min_loss = log[1]['val_loss']
-        for epoch, eplog in log.items():
-            if eplog['val_loss'] <= min_loss:
-                min_loss = eplog['val_loss']
-                best_model = epoch
-        print("best model is : model_{}.pth".format(best_model))
 
-def evaluate(args, model):
+def find_best_model(args):
+    logpath = os.path.join(args.log_dir, 'log.pickle')
+    with open(logpath, 'rb') as f:
+        log = pickle.load(f)
+    best_model = 1
+    min_loss = log[1]['val_loss']
+    for epoch, eplog in log.items():
+        if eplog['val_loss'] <= min_loss:
+            min_loss = eplog['val_loss']
+            best_model = epoch
+    print("best model is : model_{}.pth".format(best_model))
+    return 
+
+def evaluate(args, config, model):
     model = model
-    test_dataset = TreeDataset(args.data, purpose='test')
+    test_dataset = TreeDataset(config['proc_data'], purpose='test')
     model.load_state_dict(
             torch.load(args.model_ckp, map_location=device))
     model = model.to(device)
@@ -168,11 +169,11 @@ def evaluate(args, model):
             batch_size=args.batch_size)
     return 
 
-def predict(args):
+def predict(args, model):
     if args.images is None:
         raise TypeError("you need to specify image dir")
     with torch.no_grad():
-        model = ResNetModel(pretrained=False)
+        model = model
         model.load_state_dict(torch.load(
             os.path.join(args.model_ckp), 
             map_location=device,
@@ -204,7 +205,7 @@ def predict(args):
     
     return
 
-def train(config, args):
+def train(args, model, config):
     transform, mask_transform = get_transform(
             config, proj_root=args.root)
     
@@ -220,7 +221,7 @@ def train(config, args):
             purpose='val')
 
     
-    model = UNet()   
+    model = model
     if args.resume is not None:
         model.load_state_dict(
                 torch.load(os.path.join(
@@ -267,7 +268,6 @@ def get_transform(config, **kwargs):
     return transform, mask_transform
 
 
-
 if __name__=="__main__":  
     args = parser.parse_args()
     config_file=os.path.join(args.root, 'config', "config.json")
@@ -277,7 +277,7 @@ if __name__=="__main__":
     if args.model=='resnet':
         model = ResNetModel(args.pretrained)
     elif args.model=='unet':
-        model = UNet(args.pretrained)
+        model = UNet()
 
     model=model.to(device)
     main(model=model, args=args, config=config)

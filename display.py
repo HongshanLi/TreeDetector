@@ -30,4 +30,6 @@ gth_masks = [io.imread(mask) for mask in gth_masks]
 for img_name, gth, img, mask in zip(file_names, gth_masks, images, masks):
     st.image([gth, img, mask], width=200)
 
+st.write("Training an validating accuracy")
+st.image(io.imread("./plots/train_val_acc.png"))
 
