@@ -26,19 +26,20 @@ import torchvision.models as models
 
 import preprocess 
 from dataset import TreeDataset, TreeDatasetInf
-from models import ResNetModel
+from models import ResNetModel, UNet
 from criterion import Criterion
 from train_loop import Trainer
 from post_process import CleanUp
-import evaluate
+from evaluate import evaluate_model
 
 #TODO give a list of possible pretrained models
-model_names = []
+model_names = ['resnet', 'unet']
 
 parser = argparse.ArgumentParser(
         description='PyTorch Model For Segmenting Trees')
 parser.add_argument('--root', metavar='DIR', required=True,
         help='project root directory')
+
 
 parser.add_argument('--preprocess', action='store_true',
         help='preprocess raw data')
@@ -46,7 +47,7 @@ parser.add_argument('--preprocess', action='store_true',
 parser.add_argument('--data', metavar='DIR', required=False,
                     help='path to processed dataset')
 
-parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
+parser.add_argument('--model', metavar='MODEL', default='resnet',
                     choices=model_names,
                     help='model architecture: ' +
                         ' | '.join(model_names) +
@@ -111,13 +112,8 @@ parser.add_argument('--mask-dir', type=str, metavar="PATH",
 device = torch.device('cuda:0' if torch.cuda.is_available()
      else 'cpu')
 
-def main():
-    args = parser.parse_args()
-    
-    config_file=os.path.join(args.root, 'config', "config.json")
-    with open(config_file, 'r') as f:
-        config = json.load(f)
 
+def main(args, model, config):
     if not os.path.isdir(args.ckp_dir):
         os.mkdir(args.ckp_dir)
 
@@ -138,24 +134,17 @@ def main():
     if args.predict:
         predict(args)
 
-
     if args.evaluate:
+        evaluate(args=args, model=model)
         # evaluate performance of the model on test set
-        test_dataset = TreeDataset(args.data, purpose='test')
-        model = ResNetModel(pretrained=False)
-        model.load_state_dict(
-                torch.load(args.model_ckp, map_location=device))
-        model = model.to(device)
-        evaluate.evaluate_model(test_dataset, model, 
-                threshold=args.threshold, device=device, 
-                batch_size=args.batch_size)
-        return 
 
     if args.train:
         train(config, args)
 
+    # find the best model from the ckps
     if args.find_best_model:
-        # find the best models from checkpoint
+        find_best_model(args)
+
         logpath = os.path.join(args.log_dir, 'log.pickle')
         with open(logpath, 'rb') as f:
             log = pickle.load(f)
@@ -167,6 +156,17 @@ def main():
                 best_model = epoch
         print("best model is : model_{}.pth".format(best_model))
 
+def evaluate(args, model):
+    model = model
+    test_dataset = TreeDataset(args.data, purpose='test')
+    model.load_state_dict(
+            torch.load(args.model_ckp, map_location=device))
+    model = model.to(device)
+
+    evaluate_model(test_dataset, model, 
+            threshold=args.threshold, device=device, 
+            batch_size=args.batch_size)
+    return 
 
 def predict(args):
     if args.images is None:
@@ -220,7 +220,7 @@ def train(config, args):
             purpose='val')
 
     
-    model = ResNetModel(args.pretrained)   
+    model = UNet()   
     if args.resume is not None:
         model.load_state_dict(
                 torch.load(os.path.join(
@@ -268,7 +268,18 @@ def get_transform(config, **kwargs):
 
 
 
-if __name__=="__main__":
-    main()
+if __name__=="__main__":  
+    args = parser.parse_args()
+    config_file=os.path.join(args.root, 'config', "config.json")
+    with open(config_file, 'r') as f:
+        config = json.load(f)
+
+    if args.model=='resnet':
+        model = ResNetModel(args.pretrained)
+    elif args.model=='unet':
+        model = UNet(args.pretrained)
+
+    model=model.to(device)
+    main(model=model, args=args, config=config)
 
 
