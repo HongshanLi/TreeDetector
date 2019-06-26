@@ -50,44 +50,48 @@ and `proc_data/masks/` and you create a json file containing
 }
 ```
 
-## Model
-### ResNetModel
+## Models
+CNN is used to extract features from image. For this project, I have 
+two models to create masks, one uses ResNet152 as a backbone feature
+extract, the other one is a standard U-net.
 
-### UNet
 
 ## Train
-Once you have the preprocessed data ready in `proc_data/`, to train the model,
-run
+Training process uses Adam optimizer
+#### Basic use
+Once you have the preprocessed data ready in `proc_data/`, to train the resnet
+based model, run
 ```
-python src/main.py --train
+python src/main.py --train --model=resnet --epochs=[num of epochs to train]
 ```
+To train unet-based model, run
+```
+python src/main.py --train --model=unet --epochs=[num of epochs to train]
+```
+#### Advanced configurations
 You can configure the training process by adding more flags
 ```
---epochs
---start-epoch
---resume
---ckp-dir
---log-dir
+--batch-size=[batch size]
+--resume=[path to the checkpoint to resume from]
+--start-epoch=[epoch to start]
+--learning-rate=[learning rate]
+--print-freq=[num of steps to train before print out log]
 ```
-checkpoints of the model after each epoch will be saved at `--ckp-dir`. 
-Model trained after epoch N will be saved as `model_N.pth`. 
-
-Log of the whole training process will be saved at `--log-dir` as 
-`log.pickle`.
-
 
 ## Evaluate
 To find the checkpoint with the best validation accuracy, do
 ```
-python src/main.py --find-best-model --log-dir=[dir to the log file]
+python src/main.py --model=[resnet or unet] --find-best-model 
 ```
 
 To evaluate the model performance on test set, do
 ```
-python src/main.py --evaluate --model-ckp=[path to the model checkpoint]
+python src/main.py --evaluate --model=[resnet or unet] \
+        --model-ckp=[path to the model checkpoint]
 ```
 
-
+## Inference
+To create mask on images 
 
 
 

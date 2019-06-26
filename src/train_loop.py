@@ -24,8 +24,8 @@ def _print(epoch, epochs, step, steps, **kwargs):
         message = message + " {}: {:0.2f} ".format(k, v)
 
     print(message)
-
     return message
+
 class Logger(object):
     '''log the training process'''
     def __init__(self, log_dir, resume):

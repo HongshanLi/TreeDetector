@@ -5,39 +5,38 @@ device = torch.device("cuda:0" if torch.cuda.is_available()
 
 def confusion_matrix(output, target, threshold=0.5):
     '''confusion matrix for binary classfier'''
-    print('sum of target pixels:', torch.sum(target))
     # In target, 0 means tree 1 means bg
     predicted_mask = (output > threshold).float()
 
     # Positive = Tree pixel
-    tp = (predicted_mask == 0).float()*(1 - target)
-    tp = torch.sum(tp)
+
+    # true positive 
     p = (target == 0).float()
-    p = torch.sum(p)
-    tp = tp / p
-
-    tn = (predicted_mask == 1).float()*target
-    tn = torch.sum(tn)
-    n = (target == 1).float()
-    n = torch.sum(n)
-    tn = tn / n
-
-    fp = (predicted_mask == 0).float()*target
-    fp = torch.sum(fp)
-    fp = fp / n
-
-    fn = (predicted_mask == 1).float()*(1 - target)
-    fn = torch.sum(fn)
-    fn = fn / p
+    tp = (predicted_mask == 0).float()*p
+    tp = torch.sum(tp)
+    tp = tp / torch.sum(p)
     
-    cm = {"TP": tp, "TN": tn, "FP": fp, "FN":fp}
+    # true negative
+    n = (target == 1).float()
+    tn = (predicted_mask == 1).float()*n
+    tn = torch.sum(tn)
+    tn = tn / torch.sum(n)
+
+    # false positive
+    fp = (predicted_mask == 0).float()*n
+    fp = torch.sum(fp)
+    fp = fp / torch.sum(n)
+
+    # false negative
+    fn = (predicted_mask == 1).float()*p
+    fn = torch.sum(fn)
+    fn = fn / torch.sum(p)
+    
+    cm = {"TP": tp, "TN": tn, "FP": fp, "FN":fn}
     for key in cm.keys():
         cm[key] = cm[key].cpu().item()
 
     return cm
-
-    
-
     
 def pixelwise_accuracy(output, target, threshold=0.5):
     '''

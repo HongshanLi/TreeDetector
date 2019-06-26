@@ -110,6 +110,7 @@ device = torch.device('cuda:0' if torch.cuda.is_available()
 
 
 def main(args, model, config):
+
     if not os.path.isdir(args.ckp_dir):
         os.mkdir(args.ckp_dir)
 
@@ -120,8 +121,6 @@ def main(args, model, config):
         os.mkdir(args.mask_dir)
 
     if args.preprocess:
-        #@TODO put whether to redo proprocess logic here
-
         print('dividing raw images into subimages...')
         preprocess.divide_raw_imgs_masks(config, root_dir=args.root)
         print('computing mean and standard deviation for the dataset...')
@@ -143,7 +142,6 @@ def main(args, model, config):
     if args.find_best_model:
         find_best_model(args)
 
-
 def find_best_model(args):
     logpath = os.path.join(args.log_dir, 'log.pickle')
     with open(logpath, 'rb') as f:
@@ -159,7 +157,10 @@ def find_best_model(args):
 
 def evaluate(args, config, model):
     model = model
-    test_dataset = TreeDataset(config['proc_data'], purpose='test')
+    transform, mask_transform = get_transform(config, proj_root=args.root)
+    test_dataset = TreeDataset(config['proc_data'], 
+            transform=transform, mask_transform=mask_transform,
+            purpose='test')
     model.load_state_dict(
             torch.load(args.model_ckp, map_location=device))
     model = model.to(device)
@@ -246,7 +247,6 @@ def train(args, model, config):
         trainer.validate(epoch)
         trainer.logger.save_log()
     return 
-
 
 def get_transform(config, **kwargs):
     proj_root=kwargs['proj_root']

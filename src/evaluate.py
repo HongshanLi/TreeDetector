@@ -14,6 +14,7 @@ def evaluate_model(test_dataset, model, **kwargs):
     
     with torch.no_grad():
         avg_acc = 0
+        avg_cm = {'TP': 0, 'TN': 0, 'FP': 0, 'FN': 0}
         for step, (img, mask) in enumerate(loader):
             step = step + 1
             img = img.to(device)
@@ -22,10 +23,18 @@ def evaluate_model(test_dataset, model, **kwargs):
 
             acc = utils.pixelwise_accuracy(output, 
                     mask, threshold)
+            cm = utils.confusion_matrix(output, mask, 
+                    threshold)
             avg_acc = avg_acc + acc
+
+            for key in avg_cm.keys():
+                avg_cm[key] = avg_cm[key] + cm[key]
             
             msg = "Step : {}, Acc : {:0.3f}".format(step,acc)
-
             print(msg)
         avg_acc = avg_acc / step 
+        
+        for key in avg_cm.keys():
+            avg_cm[key] = avg_cm[key] / step
         print("Average acc : {:0.3f}".format(avg_acc))
+        print(avg_cm)

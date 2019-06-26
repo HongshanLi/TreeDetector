@@ -1,10 +1,11 @@
 #!/bin/bash
 ROOT=$(pwd)
 
-python src/main.py  --train --model=unet \
-        --root=$ROOT --learning-rate=0.0001 --batch-size=16 \
-        --log-dir=$ROOT/unet_logs --ckp-dir=$ROOT/unet_ckps \
-        --print-freq=10 --epochs=15 \
+python src/main.py  --train --model=resnet \
+        --root=$ROOT --learning-rate=0.0001 --batch-size=32 \
+        --log-dir=$ROOT/logs --ckp-dir=$ROOT/ckps \
+        --resume=model_15.pth \
+        --print-freq=10 --start-epoch=15 --epochs=1 \
 
 # stop the instance after training
 
