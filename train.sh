@@ -1,11 +1,8 @@
 #!/bin/bash
-ROOT=$(pwd)
 
 python src/main.py  --train --model=resnet \
-        --root=$ROOT --learning-rate=0.0001 --batch-size=32 \
-        --log-dir=$ROOT/logs --ckp-dir=$ROOT/ckps \
-        --resume=model_15.pth \
-        --print-freq=10 --start-epoch=15 --epochs=1 \
+        --learning-rate=0.0001 --batch-size=3 \
+        --print-freq=10 --epochs=2 \
 
 # stop the instance after training
 

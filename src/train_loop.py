@@ -28,7 +28,7 @@ def _print(epoch, epochs, step, steps, **kwargs):
 
 class Logger(object):
     '''log the training process'''
-    def __init__(self, log_dir, resume):
+    def __init__(self, log_dir, resume=False):
         '''
         Args:
             log_dir: directory to save the log file
@@ -36,7 +36,7 @@ class Logger(object):
         # read the log files if not the starting from 0 th 
         self.log_dir = log_dir
         
-        if resume is not None:
+        if resume:
             log_path = os.path.join(log_dir, 'log.pickle')
             with open(log_path, 'rb') as f:
                 self.log = pickle.load(f)
@@ -79,41 +79,48 @@ class Logger(object):
             pickle.dump(self.log, f)
         return
 
-
 class Trainer(object):
     def __init__(self, train_dataset, val_dataset, model, 
-            criterion, args):
+        criterion, **kwargs):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() 
                 else "cpu")
         print("Device: ", self.device)
 
         self.train_dataset = train_dataset
         self.val_dataset = val_dataset
+        self.ckp_dir = kwargs['ckp_dir']
+        self.log_dir = kwargs['log_dir']
+        self.batch_size = kwargs['batch_size']
+        self.lr = kwargs['lr']
+        self.resume = kwargs['resume']
+        self.threshold = kwargs['threshold']
+        self.print_freq = kwargs['print_freq']
+        self.start_epoch = kwargs['start_epoch']
+        self.epochs = kwargs['epochs']
 
         self.train_loader = DataLoader(
-                train_dataset, batch_size=args.batch_size,
-                shuffle=True, num_workers=args.workers)
+                train_dataset, batch_size=self.batch_size,
+                shuffle=True, num_workers=2)
         
         self.val_loader = DataLoader(
-                val_dataset, batch_size=args.batch_size,
-                shuffle=False, num_workers=args.workers)
+                val_dataset, batch_size=self.batch_size,
+                shuffle=False, num_workers=2)
 
-        self.args = args
+
         self.total_steps = self.total_steps()
-
         self.model = model.train().to(self.device)
 
         self.criterion = criterion
         self.optimizer = optim.Adam(self.model.parameters(), 
-                lr=self.args.lr, weight_decay=1e-5)
+                lr=self.lr, weight_decay=1e-5)
 
-        self.logger = Logger(log_dir=self.args.log_dir, 
-                resume=self.args.resume)
+        self.logger = Logger(log_dir=self.log_dir, 
+                resume=self.resume)
         return
 
     def total_steps(self):
         '''Compute total steps per epoch'''
-        x = len(self.train_dataset) / float(self.args.batch_size)
+        x = len(self.train_dataset) / float(self.batch_size)
         if x % 1 == 0:
             total_steps = int(x)
         else:
@@ -142,13 +149,13 @@ class Trainer(object):
 
                 loss = loss.detach().cpu().item()
                 acc = utils.pixelwise_accuracy(output, mask, 
-                        threshold=self.args.threshold)
+                        threshold=self.threshold)
 
                 train_loss = train_loss + loss
                 train_acc = train_acc + acc
 
-                if step % self.args.print_freq == 0:
-                    epochs = self.args.start_epoch + self.args.epochs-1
+                if step % self.print_freq == 0:
+                    epochs = self.start_epoch + self.epochs-1
                     cm = utils.confusion_matrix(output, mask)
 
                     _print(epoch=epoch, epochs=epochs, 
@@ -162,7 +169,7 @@ class Trainer(object):
             # logs from other epochs
             except KeyboardInterrupt:
                 print("Saving logs from previous epochs before shutting down the process")
-                self.logger.log[epoch] = None
+                self.logger.log[epoch] = 'keyboard interrupt'
                 self.logger.save_log()
         
         train_loss = train_loss / self.total_steps
@@ -190,7 +197,7 @@ class Trainer(object):
                 loss = bg_l + tree_l
                 
                 acc = utils.pixelwise_accuracy(output, mask, 
-                    threshold=self.args.threshold)
+                    threshold=self.threshold)
 
                 val_loss = val_loss + loss.cpu().item()
                 val_acc = val_acc + acc
@@ -207,7 +214,7 @@ class Trainer(object):
         ckp_file = 'model_{}.pth'.format(epoch)
         try:
             state_dict = self.model.state_dict()
-            ckp_path = os.path.join(self.args.ckp_dir, 
+            ckp_path = os.path.join(self.ckp_dir, 
                     ckp_file)
 
             _save_checkpoint(state_dict, ckp_path)

@@ -29,7 +29,7 @@ and the second column consists of full path of the corresponding masks.
 
 Then run
 ```
-bash preprocess.sh
+python src/main.py --preprocess
 ```
 After the process is finished, you should see `proc_data/` in the project
 root directory. `proc_data/` consists of two sub-direcoties 
@@ -71,11 +71,10 @@ python src/main.py --train --model=unet --epochs=[num of epochs to train]
 #### Advanced configurations
 You can configure the training process by adding more flags
 ```
---batch-size=[batch size]
---resume=[path to the checkpoint to resume from]
---start-epoch=[epoch to start]
---learning-rate=[learning rate]
---print-freq=[num of steps to train before print out log]
+--batch-size=[int: batch size]
+--resume=[bool: resume from the lastest ckp]
+--learning-rate=[float: learning rate]
+--print-freq=[int: num of steps to train before print out log]
 ```
 
 ## Evaluate
@@ -89,9 +88,28 @@ To evaluate the model performance on test set, do
 python src/main.py --evaluate --model=[resnet or unet] \
         --model-ckp=[path to the model checkpoint]
 ```
+For example, if you want to evaluate the checkpoint of 
+resnet model on test set, do
+```
+python src/main.py --evaluate --model=resnet \
+        --model-ckp=resnet_ckps/model_10.pth
+```
 
 ## Inference
-To create mask on images 
+To create mask on images, do
+```
+python src/main.py --predict --model=[resnet or unet] \
+        --model-ckps=[path to model ckp] \
+        --image-dir=[directory of RGB imgs] \
+        --mask-dir=[directory of predicted masks]
+```
+For examples, if you want to use resnet model with checkpoint trained after 10th epoch,
+the images you want to draw masks on are saved in `images/` and you want to 
+save the predicted masks in `masks/`, do
+```
+python src/main.py --predict --model=resnet --model=resnet_ckps/model_10.pth \
+        --image-dir=images/ --mask-dir=masks/
+```
 
 
 

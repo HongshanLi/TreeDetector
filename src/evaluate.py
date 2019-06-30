@@ -2,6 +2,7 @@
 import torch
 from torch.utils.data import DataLoader
 import utils
+import time
 
 def evaluate_model(test_dataset, model, **kwargs):
     device = kwargs['device']
@@ -17,24 +18,32 @@ def evaluate_model(test_dataset, model, **kwargs):
         avg_cm = {'TP': 0, 'TN': 0, 'FP': 0, 'FN': 0}
         for step, (img, mask) in enumerate(loader):
             step = step + 1
+            
             img = img.to(device)
             mask = mask.to(device)
+
+            start = time.time()
             output = model(img)
+            end = time.time()
 
             acc = utils.pixelwise_accuracy(output, 
                     mask, threshold)
             cm = utils.confusion_matrix(output, mask, 
                     threshold)
             avg_acc = avg_acc + acc
-
+            
             for key in avg_cm.keys():
                 avg_cm[key] = avg_cm[key] + cm[key]
             
-            msg = "Step : {}, Acc : {:0.3f}".format(step,acc)
+            msg = "Step : {}, Acc : {:0.3f}".format(step, acc)
+            print("{}, {}".format(img.shape[0], end - start))
+            msg = msg + " Speed: {:0.2f} imgs/ sec".format(img.shape[0] / (end - start) )
             print(msg)
+
         avg_acc = avg_acc / step 
         
+
         for key in avg_cm.keys():
             avg_cm[key] = avg_cm[key] / step
         print("Average acc : {:0.3f}".format(avg_acc))
-        print(avg_cm)
+        print("confusion matrix", avg_cm)
