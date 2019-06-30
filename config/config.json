@@ -1,0 +1,11 @@
+{
+        "raw_img_mask": "raw_img_mask.csv",
+        "proc_data": "proc_data/",
+        "proc_imgs": "proc_data/imgs",
+        "proc_masks": "proc_data/masks",
+        "mean_std": "proc_data/mean_std.json",
+        "raw_img_height" : 1250,
+        "raw_img_width": 1250,
+        "proc_img_height": 250,
+        "proc_img_width": 250
+}

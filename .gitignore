@@ -1,9 +1,26 @@
+src/__pycache__/
 __pycache__/
 
 # model checkpoints
-ckps/
+*ckps/
 
-logs/
+# any backup files
+*.bak/
+
+# log files
+*logs/
+
+# tmp files
+tmp/
+
+# processed data
+proc_data/
 
 .streamlit/
 .ipynb_checkpoints
+
+# images to predict
+./images
+
+# predicted masks
+./masks
