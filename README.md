@@ -1,13 +1,11 @@
 # TreeDetector
 
 ## Data
-The raw data I had from Aerialytic consists of 1250 x 1250 aerial RGBA images, 
-point-cloud LiDAR images (for elevation), infrared pixelpeak images,
-and hand-labellel mask for trees (as RGB images). 
+The raw data I used is 1250 x 1250 RGBA images and their corresponding masks
 They are proprietary to Aerialytic, so I cannot release them. 
 
-In my finalized model, I only used the RGB channels of the 
-aerial RGBA images and their corresponding masks. 
+In my finalized models, I only used the RGB channels of the 
+aerial RGBA images and their masks. 
 
 ### preprocess
 Pre-process consists of:
@@ -32,7 +30,7 @@ Then run
 python src/main.py --preprocess
 ```
 After the process is finished, you should see `proc_data/` in the project
-root directory. `proc_data/` consists of two sub-direcoties 
+root directory. `proc_data/` consists of two sub-directories 
 `proc_data/imgs/` and `proc_data/masks/`, and a json file `mean_std.json`.
 The sub-directories constains the 250x250 RGB images 
 and their corresponding masks, respectively. Name of the images match 
@@ -89,7 +87,7 @@ python src/main.py --evaluate --model=[resnet or unet] \
         --model-ckp=[path to the model checkpoint]
 ```
 For example, if you want to evaluate the checkpoint of 
-resnet model on test set, do
+resnet model obtained after 10th epoch on test set, do
 ```
 python src/main.py --evaluate --model=resnet \
         --model-ckp=resnet_ckps/model_10.pth
