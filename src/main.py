@@ -24,7 +24,7 @@ import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 import torchvision.models as models
 
-import preprocess 
+import preprocess as prep
 from dataset import TreeDataset, TreeDatasetInf
 from models import ResNetModel, UNet
 from criterion import Criterion
@@ -55,7 +55,7 @@ parser.add_argument('--train', action='store_true',
                     help='train the model')
 parser.add_argument('--pretrained', action='store_true',
                     help="use pretrained resnet152")
-parser.add_argument('--batch-size', default=256, type=int,
+parser.add_argument('--batch-size', default=16, type=int,
                     metavar='N',
                     help='batch size')
 parser.add_argument('--learning-rate', default=0.1, type=float,
@@ -159,9 +159,9 @@ def main():
 
 def preprocess():
     print('dividing raw images into subimages...')
-    preprocess.divide_raw_imgs_masks(config, root_dir=ROOT)
+    prep.divide_raw_imgs_masks(config, root_dir=ROOT)
     print('computing mean and standard deviation for the dataset...')
-    preprocess.compute_mean_std(config, root_dir=ROOT)
+    prep.compute_mean_std(config, root_dir=ROOT)
     return
 
 def find_best_model():

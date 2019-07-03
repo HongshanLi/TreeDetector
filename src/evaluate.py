@@ -36,7 +36,6 @@ def evaluate_model(test_dataset, model, **kwargs):
                 avg_cm[key] = avg_cm[key] + cm[key]
             
             msg = "Step : {}, Acc : {:0.3f}".format(step, acc)
-            print("{}, {}".format(img.shape[0], end - start))
             msg = msg + " Speed: {:0.2f} imgs/ sec".format(img.shape[0] / (end - start) )
             print(msg)
 
