@@ -7,6 +7,14 @@ They are proprietary to Aerialytic, so I cannot release them.
 In my finalized models, I only used the RGB channels of the 
 aerial RGBA images and their masks. 
 
+
+## Set up
+```
+git clone https://github.com/HongshanLi/TreeDetector
+cd TreeDetector
+pip install -r requirements.txt
+```
+
 ### preprocess
 Pre-process consists of:
 - Divide 1250x1250 RGBA images into 25 250x250 sub-images
@@ -108,6 +116,7 @@ save the predicted masks in `masks/`, do
 python src/main.py --predict --model=resnet --model=resnet_ckps/model_10.pth \
         --image-dir=images/ --mask-dir=masks/
 ```
+
 
 
 
