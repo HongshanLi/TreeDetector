@@ -202,13 +202,21 @@ def predict():
 
         transform = transforms.Compose([
             transforms.ToTensor(),
-            # @TODO add normalization here
             ])
 
         ds = TreeDatasetInf(args.image_dir, transform=transform)
         cleanup = CleanUp()
         for i in range(len(ds)):
             img, img_name = ds[i]
+
+            # normalize img
+            # @TODO implement std by hand to avoid calculate 
+            # mean twice 
+            mean = torch.mean(img, dim=(1,2))
+            std = torch.std(img, dim=(1,2))
+
+            img = (img - mean) / std
+
             img = img.unsqueeze(0)
             img = img.to(device)
             mask = model(img)
