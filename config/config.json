@@ -7,5 +7,6 @@
         "raw_img_height" : 1250,
         "raw_img_width": 1250,
         "proc_img_height": 250,
-        "proc_img_width": 250
+        "proc_img_width": 250,
+        "greenpixel": 0.43
 }
