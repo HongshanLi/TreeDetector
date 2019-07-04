@@ -34,6 +34,27 @@ class Constant(object):
         return y
 
 
+class PixelThreshold(object):
+    '''Threshold on Green pixels
+    Identify green pixels as trees
+    '''
+    def __init__(self, threshold):
+        '''
+        Args:
+            threshold: threshold for green pixel.
+            If green channel of a pixel in image tensor 
+            is bigger than [threshold], identify it as
+            tree
+        '''
+        self.threshold = threshold
+    def __call__(self, imgs):
+        green_channel = imgs[:,1,:,:]
+        # white pixels are background
+        mask = green_channel < self.threshold
+        return mask
+
+
+
 if __name__=='__main__':
     ds = TreeDataset(args.data, purpose='test')
     dataloader = DataLoader(ds, batch_size=16)
@@ -45,8 +66,6 @@ if __name__=='__main__':
     model = model.to(device)
     model.load_state_dict(
             torch.load(args.model_ckp, map_location=device))
-
-
     baseline_acc = 0
     model_acc = 0
 
@@ -54,8 +73,6 @@ if __name__=='__main__':
 
     model_cm = {'TP':0, 'TN':0, 'FP': 0, 'FN':0}
     for step, (img, _, mask) in enumerate(dataloader):
-        img = img.to(device)
-        mask = mask.to(device)
         output = baseline(mask)
 
         acc = utils.pixelwise_accuracy(output, mask)
@@ -67,7 +84,10 @@ if __name__=='__main__':
             baseline_cm[key] = baseline_cm[key] + cm[key]
         
         with torch.no_grad():
+            img = img.to(device)
+            mask = mask.to(device)
             output = model(img)
+
         acc = utils.pixelwise_accuracy(output, mask)
         model_acc = model_acc + acc
         cm = utils.confusion_matrix(output, mask)

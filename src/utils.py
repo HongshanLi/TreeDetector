@@ -51,3 +51,18 @@ def pixelwise_accuracy(output, target, threshold=0.5):
     acc = acc.cpu().item()
 
     return acc
+
+def iou(output, target, threshold=0.5):
+    '''compute IOU between output mask and ground truth mask'''
+    predicted_mask = (output > threshold).float()
+    # when compute IOU it is easier to make tree pixel 
+    # to have value 1
+    
+    target = (target == 0).float()
+    predicted_mask = (predicted_mask == 0).float()
+    
+
+    intersection = (predicted_mask * target).float()
+    union = predicted_mask + target - intersection
+    iou = torch.sum(intersection) / torch.sum(union)
+    return iou
