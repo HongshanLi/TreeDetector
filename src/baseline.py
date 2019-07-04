@@ -5,13 +5,12 @@ import torch
 from torch.utils.data import DataLoader
 from dataset import TreeDataset
 import utils
-from model import Model
 
 
 device = torch.device('cuda:0' if torch.cuda.is_available()
         else 'cpu')
 
-
+'''
 parser = argparse.ArgumentParser(
         description='Baseline models to GreenNet')
 
@@ -24,6 +23,7 @@ parser.add_argument('--model-ckp', metavar="PATH",
 
 
 args = parser.parse_args()
+'''
 
 class Constant(object):
     '''constant classifier 
@@ -51,6 +51,7 @@ class PixelThreshold(object):
         green_channel = imgs[:,1,:,:]
         # white pixels are background
         mask = green_channel < self.threshold
+        mask = mask.unsqueeze(1)
         return mask
 
 

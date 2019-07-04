@@ -31,6 +31,7 @@ from criterion import Criterion
 from train_loop import Trainer
 from post_process import CleanUp
 from evaluate import evaluate_model
+from baseline import PixelThreshold
 
 model_names = ['resnet', 'unet']
 
@@ -72,12 +73,14 @@ parser.add_argument('--resume', action='store_true',
                     help='resume training from a checkpoint')
 
 
+# evaluate
 parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
                     help='evaluate model on validation set')
+parser.add_argument('--baseline', action='store_true',
+        help='use baseline to evaluate model')
 parser.add_argument('--find-best-model', dest='find_best_model', 
         action='store_true', help='find the best model from the ckp')
 
-# evaluation
 parser.add_argument('-t', '--threshold', dest='threshold',
         type=float, default=0.5, 
         help='threshold to convert softmax to one-hot encode')
@@ -183,12 +186,21 @@ def evaluate():
             transform=transform, mask_transform=mask_transform,
             purpose='test')
 
+    # baseline
+    if args.baseline:
+        print('====== Baseline Performance ======')
+        baseline = PixelThreshold(config['greenpixel'])
+        evaluate_model(test_dataset, baseline,
+                threshold=args.threshold, device=torch.device('cpu'),
+                batch_size=args.batch_size)
+
+    print('====== CNN Model Performance ======')
     model.load_state_dict(
             torch.load(args.model_ckp, map_location=device))
 
     evaluate_model(test_dataset, model, 
             threshold=args.threshold, device=device, 
-            batch_size=args.batch_size)
+          batch_size=args.batch_size)
     return 
 
 def predict():
