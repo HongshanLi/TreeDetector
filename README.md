@@ -69,11 +69,10 @@ CNN is used to extract features from image. For this project, I have
 two models to create masks, one uses ResNet152 as a backbone feature
 extractor, the other one is a standard U-net.
 
-A sample prediction by the trained ResNet152-based model
-[!sample output](./static/)
+![sample output](./static/sample_unet.png)
 
-A sample prediction by the trained Unet
-@TODO add image here
+![sample output](./static/sample_resnet.png)
+
 
 
 ## Train
