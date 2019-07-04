@@ -1,4 +1,6 @@
 # TreeDetector
+## Deep learning models to segment trees in 2D RGB aerial imagery
+
 
 ## Data
 The raw data I used is 1250 x 1250 RGBA images and their corresponding masks
