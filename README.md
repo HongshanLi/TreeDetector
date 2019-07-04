@@ -1,19 +1,27 @@
-# TreeDetector
+# TreeDetector: Predict tree coverage
+![Project Description](./static/proj_dsp.png)
 
-## Data
-The raw data I used is 1250 x 1250 RGBA images and their corresponding masks
-They are proprietary to Aerialytic, so I cannot release them. 
+This is the project I worked on at Insight Data Science.
+It is a consulting project for Aerialytic.
+The project demo can be found [here](https://docs.google.com/presentation/d/1hNJnrgQvOk3Bi-aoHRNYCFyrtNb9LjB2eyo4sXsL4n8/edit#slide=id.g5cf1a3734f_0_6)
+The goal of this project is to develop deep learning models for segmenting
+trees from aerial imagery.
 
-In my finalized models, I only used the RGB channels of the 
-aerial RGBA images and their masks. 
-
-
-## Set up
+## Setup
 ```
 git clone https://github.com/HongshanLi/TreeDetector
 cd TreeDetector
 pip install -r requirements.txt
 ```
+
+## Data
+The relavant raw data I used are provided by Aerialytic. 
+It consists of 1250 x 1250 RGBA images and their corresponding masks.
+They are proprietary to Aerialytic, so I cannot release them. 
+
+In my finalized models, I only used the RGB channels of the 
+aerial RGBA images and their masks. 
+
 
 ### preprocess
 Pre-process consists of:
@@ -59,7 +67,13 @@ and `proc_data/masks/` and you create a json file containing
 ## Models
 CNN is used to extract features from image. For this project, I have 
 two models to create masks, one uses ResNet152 as a backbone feature
-extract, the other one is a standard U-net.
+extractor, the other one is a standard U-net.
+
+A sample prediction by the trained ResNet152-based model
+[!sample output](./static/)
+
+A sample prediction by the trained Unet
+@TODO add image here
 
 
 ## Train
@@ -76,6 +90,9 @@ python src/main.py --train --model=unet --epochs=[num of epochs to train]
 ```
 #### Advanced configurations
 You can configure the training process by adding more flags
+
+
+
 ```
 --batch-size=[int: batch size]
 --resume=[bool: resume from the lastest ckp]
