@@ -78,7 +78,10 @@ parser.add_argument('--find-best-model', dest='find_best_model',
         action='store_true', help='find the best model from the ckp')
 
 # evaluation
-parser.add_argument('-t', '--threshold', dest='threshold',
+parser.add_argument('--baseline', action='store_true',
+        help="evaluate model with a baseline")
+
+parser.add_argument('-t', '--threshold',
         type=float, default=0.5, 
         help='threshold to convert softmax to one-hot encode')
 
@@ -183,9 +186,20 @@ def evaluate():
             transform=transform, mask_transform=mask_transform,
             purpose='test')
 
+    # baseline
+    if args.baseline:
+        print("====== Performance of baseline model ======")
+        baseline = PixelThreshold(config['greenpixel'])
+        evalute_model(test_dataset, baseline, 
+                threshold=args.threshold,
+                batch_size=args.batch_size,
+                device=torch.device('cpu'))
+    
+    # CNN model
+
     model.load_state_dict(
             torch.load(args.model_ckp, map_location=device))
-
+    print("====== Performance of CNN model ======")
     evaluate_model(test_dataset, model, 
             threshold=args.threshold, device=device, 
             batch_size=args.batch_size)
