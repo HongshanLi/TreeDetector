@@ -65,4 +65,4 @@ def iou(output, target, threshold=0.5):
     intersection = (predicted_mask * target).float()
     union = predicted_mask + target - intersection
     iou = torch.sum(intersection) / torch.sum(union)
-    return iou
+    return iou.cpu().item()

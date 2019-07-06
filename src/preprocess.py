@@ -54,6 +54,7 @@ def divide_raw_imgs_masks(config, **kwargs):
                     start_y, end_y = k*ph, (k+1)*ph
                     
                     sub_img = img[start_x:end_x, start_y:end_y,0:3]
+                    # only use gray scale mask
                     sub_mask = mask[start_x:end_x, start_y:end_y,1]
                     
                     file_name = "{}_{}_{}.png".format(i, j, k)

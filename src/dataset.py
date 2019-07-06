@@ -89,8 +89,6 @@ class TreeDataset(Dataset):
         
         if self.mask_transform is not None:
             mask = self.mask_transform(mask)
-            mask = mask.view(1,250,250)
-
         return img, mask
     
     def get_file_names(self):

@@ -214,13 +214,22 @@ def predict():
 
         transform = transforms.Compose([
             transforms.ToTensor(),
-            # @TODO add normalization here
             ])
 
         ds = TreeDatasetInf(args.image_dir, transform=transform)
-        cleanup = CleanUp()
+        cleanup = CleanUp(threshold=args.threshold)
         for i in range(len(ds)):
             img, img_name = ds[i]
+
+            # @TODO convert to batch parallelism
+            # normalize img
+            mean = torch.mean(img, dim=(1,2))
+            std = torch.std(img, dim=(1,2))
+           
+            mean = mean.view(3, 1, 1)
+            std = std.view(3, 1, 1)
+            img = (img - mean) / std
+
             img = img.unsqueeze(0)
             img = img.to(device)
             mask = model(img)
@@ -230,6 +239,7 @@ def predict():
             mask = mask.cpu().numpy()
             
             mask = cleanup(mask)
+            
 
             scipy.misc.imsave(
                     os.path.join(args.mask_dir, img_name), mask
@@ -250,7 +260,10 @@ def train():
     val_dataset = TreeDataset(proc_data, 
             transform=transform, mask_transform=mask_transform,
             purpose='val')
+    i,t = train_dataset[0]
+    print(i.shape, t.shape)
 
+    '''
     num_models = len(os.listdir(CKPDIR))
     if args.resume:
         lastest_model = 'model_{}.pth'.format(num_models)
@@ -287,6 +300,7 @@ def train():
         trainer(epoch)
         trainer.validate(epoch)
         trainer.logger.save_log()
+        '''
     return 
 
 def get_transform():
