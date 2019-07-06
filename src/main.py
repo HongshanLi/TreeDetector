@@ -7,7 +7,7 @@ import warnings
 import pickle
 import scipy.misc
 import json
-
+import shutil
 
 import torch
 import torch.nn as nn
@@ -161,10 +161,31 @@ def main():
     return
 
 def preprocess():
-    print('dividing raw images into subimages...')
-    prep.divide_raw_imgs_masks(config, root_dir=ROOT)
-    print('computing mean and standard deviation for the dataset...')
-    prep.compute_mean_std(config, root_dir=ROOT)
+    # directory of processed data 
+    proc_dir = os.path.join(ROOT, config['proc_data'])
+
+    if os.path.isdir(proc_dir):
+        print('proc_data/ already exists in root dir, do you want to overwrite it?')
+        x = input("Type y to overwrite, type any other string to exit: ")
+        if x == 'y':
+            shutil.rmtree(proc_dir)
+            os.makedirs(os.path.join(ROOT, config['proc_imgs']))
+            os.makedirs(os.path.join(ROOT, config['proc_lidars']))
+            os.makedirs(os.path.join(ROOT, config['proc_masks']))
+        else:
+            return
+    else:
+        os.makedirs(os.path.join(ROOT, config['proc_imgs']))
+        os.makedirs(os.path.join(ROOT, config['proc_lidar']))
+        os.makedirs(os.path.join(ROOT, config['proc_masks']))
+
+
+    print('====== dividing raw images into subimages ======')
+    prep.divide_raw_data(config, root_dir=ROOT)
+    print('====== Computing mean and standard deviation for the RGB images ======')
+    prep.compute_mean_std(config, root_dir=ROOT, data_type='rgb')
+    print('====== Computing mean and standard deviation for the LiDAR images ======')
+    prep.compute_mean_std(config, root_dir=ROOT, data_type='lidar')
     return
 
 def find_best_model():
