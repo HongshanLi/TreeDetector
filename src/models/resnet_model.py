@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torchvision.models as models
+from .post_process import PostProcess
 
 class ResNetFE(nn.Module):
     '''Resnet backbone for feature extraction'''
@@ -70,17 +71,28 @@ class Mask(nn.Module):
 
 class ResNetModel(nn.Module):
     '''final model for creating tree mask for 2d RGB images'''
-    def __init__(self, pretrained):
+    def __init__(self, pretrained, use_lidar):
         super(ResNetModel, self).__init__()
         self.model_name='resnet'
+
+        self.use_lidar = use_lidar
 
         # feature extractor
         self.fe = ResNetFE(pretrained)
         self.mask = Mask()
+
+        if self.use_lidar:
+            self.post_process = PostProcess()
+        
     
-    def forward(self, x):
+    def forward(self, x, lidar=None):
         x = self.fe(x)
         x = self.mask(x)
+
+        if self.use_lidar:
+            x = torch.cat([x, lidar], dim=1)
+            x = self.post_process(x)
+
         return x
 
 

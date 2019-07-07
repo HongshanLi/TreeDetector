@@ -16,7 +16,11 @@ import random
 
 
 class TreeDataset(Dataset):
-    def __init__(self, proc_dir, transform, mask_transform, 
+    def __init__(self, proc_dir, 
+            transform, 
+            lidar_transform,
+            mask_transform,
+            use_lidar,
             purpose='train'):
         '''
         Args:
@@ -30,8 +34,12 @@ class TreeDataset(Dataset):
         self.file_names = self.get_file_names()
         
         self.transform = transform
+        self.lidar_transform = lidar_transform
         self.mask_transform = mask_transform
 
+        # use lidar img or not
+        self.use_lidar = use_lidar
+        
         # choose the same 90% imgs for training
         np.random.seed(42)
         total_size = len(self.file_names)
@@ -84,12 +92,25 @@ class TreeDataset(Dataset):
         img = io.imread(img)
         mask = io.imread(mask)
 
+        # only use one channel for mask
+        mask = mask[:,:,1]
+
+        if self.use_lidar:
+            lidar = os.path.join(self.proc_dir, 'lidars/', file_name)
+            lidar = io.imread(lidar)
+        else:
+            # return a placeholde tensor
+            lidar = torch.zeros([0])
+
         if self.transform is not None:
             img  = self.transform(img)
+
+        if self.use_lidar and self.lidar_transform is not None:
+            lidar = self.lidar_transform(lidar)
         
         if self.mask_transform is not None:
             mask = self.mask_transform(mask)
-        return img, mask
+        return img, lidar, mask
     
     def get_file_names(self):
         file_names = os.listdir(os.path.join(
@@ -98,10 +119,15 @@ class TreeDataset(Dataset):
 
 class TreeDatasetInf(Dataset):
     '''Data fetch pipeline for inference'''
-    def __init__(self, img_dir, transform):
+    def __init__(self, img_dir, lidar_dir,
+        transform, lidar_transform, use_lidar):
+
         self.img_dir = img_dir
+        self.lidar_dir = lidar_dir
         self.img_names = os.listdir(img_dir)
         self.transform = transform
+        self.lidar_transform = lidar_transform
+        self.use_lidar = use_lidar
 
     def __len__(self):
         return len(self.img_names)
@@ -113,7 +139,15 @@ class TreeDatasetInf(Dataset):
         if self.transform is not None:
             img = self.transform(img)
 
-        return img, img_name
+        if self.use_lidar:
+            lidar = io.imread(os.path.join(self.lidar_dir,img_name))
+            if self.lidar_transform is not None:
+                lidar = self.lidar_transform(lidar)
+        else:
+            # placeholder
+            lidar = torch.zeros([0])
+
+        return img_name, img, lidar
 
         
 

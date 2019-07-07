@@ -85,9 +85,11 @@ class Trainer(object):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() 
                 else "cpu")
         print("Device: ", self.device)
-
+        
         self.train_dataset = train_dataset
         self.val_dataset = val_dataset
+        self.debug = kwargs['debug']
+        self.use_lidar = kwargs['use_lidar']
         self.ckp_dir = kwargs['ckp_dir']
         self.log_dir = kwargs['log_dir']
         self.batch_size = kwargs['batch_size']
@@ -105,7 +107,6 @@ class Trainer(object):
         self.val_loader = DataLoader(
                 val_dataset, batch_size=self.batch_size,
                 shuffle=False, num_workers=2)
-
 
         self.total_steps = self.total_steps()
         self.model = model.train().to(self.device)
@@ -134,20 +135,24 @@ class Trainer(object):
 
         train_loss = 0
         train_acc = 0
-        for step, (feature, mask) in enumerate(self.train_loader):
+        for step, (feature, lidar, mask) in enumerate(self.train_loader):
             step = step + 1
+            
             feature = feature.to(self.device)
+            lidar = lidar.to(self.device)
             mask = mask.to(self.device)
 
             try:
                 self.optimizer.zero_grad()
-                output = self.model(feature)
+                output = self.model(feature, lidar)
                 bg_l, tree_l= self.criterion(output, mask)
                 loss = bg_l + tree_l
                 loss.backward()
                 self.optimizer.step()
 
                 loss = loss.detach().cpu().item()
+
+
                 acc = utils.pixelwise_accuracy(output, mask, 
                         threshold=self.threshold)
 
@@ -171,13 +176,15 @@ class Trainer(object):
                 print("Saving logs from previous epochs before shutting down the process")
                 self.logger.log[epoch] = 'keyboard interrupt'
                 self.logger.save_log()
-        
-        train_loss = train_loss / self.total_steps
-        train_acc = train_acc / self.total_steps
-        self.logger(epoch=epoch, 
-                train_loss=train_loss, 
-                train_acc=train_acc)
-        self.save_ckp(epoch)
+        if self.debug:
+            return
+        else:
+            train_loss = train_loss / self.total_steps
+            train_acc = train_acc / self.total_steps
+            self.logger(epoch=epoch, 
+                    train_loss=train_loss, 
+                    train_acc=train_acc)
+            self.save_ckp(epoch)
         return
     
     def validate(self, epoch):
@@ -187,27 +194,30 @@ class Trainer(object):
             val_loss = 0
             val_acc = 0
 
-            for step, (feature, mask) in enumerate(self.val_loader):
+            for step, (feature, lidar, mask) in enumerate(self.val_loader):
                 step = step + 1
+
                 feature = feature.to(self.device)
+                lidar = lidar.to(self.device)
                 mask = mask.to(self.device)
 
-                output = self.model(feature)
+                output = self.model(feature, lidar)
                 bg_l, tree_l = self.criterion(output, mask)
                 loss = bg_l + tree_l
-                
+
                 acc = utils.pixelwise_accuracy(output, mask, 
                     threshold=self.threshold)
-
                 val_loss = val_loss + loss.cpu().item()
                 val_acc = val_acc + acc
-            
+
+        
             val_loss = val_loss / step
             val_acc = val_acc / step
-
-            self.logger(epoch=epoch, val_loss=val_loss, val_acc=val_acc)
             print("Val Loss: {:0.2f}, Val Acc: {:0.2f}".format(val_loss, val_acc))
-
+            if self.debug:
+                return
+            else:
+                self.logger(epoch=epoch, val_loss=val_loss, val_acc=val_acc)
         return
 
     def save_ckp(self, epoch):

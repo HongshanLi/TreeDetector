@@ -46,9 +46,8 @@ def divide_raw_data(config, **kwargs):
                     lidar = data[1]
                     sub_lidar = lidar[start_x:end_x, start_y:end_y]
 
-                    # only use gray scale mask
                     mask = data[2]
-                    sub_mask = mask[start_x:end_x, start_y:end_y,1]
+                    sub_mask = mask[start_x:end_x, start_y:end_y,0:3]
                     
                     file_name = "{}_{}_{}.png".format(i, j, k)
 
@@ -105,7 +104,6 @@ def compute_mean_std(config, **kwargs):
         mean = mean + np.mean(item, axis=(0,1))
 
         std = std + np.std(item, axis=(0,1))
-        print("std is:", std)
 
     mean = mean / len(files)
     std = std / len(files)
