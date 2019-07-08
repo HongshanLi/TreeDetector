@@ -372,6 +372,7 @@ def train():
         print("Time to train one epoch is: {:0.2f}".format(end - start))
         if args.debug==False:
             trainer.logger.save_log()
+
     return 
 
 def get_transform():
