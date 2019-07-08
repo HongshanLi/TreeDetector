@@ -15,17 +15,18 @@ class CleanUp(object):
 
     
     def __call__(self, x):
+
         x = self.suppression(x)
-        return x
+        pretty_mask = self.beautify(x)
+        return pretty_mask
 
     def suppression(self, x):
         '''
-        a pixel is white if and only if its value is
+        a pixel is white (background) if and only if its value is
         bigger than threshold
         '''
         x = (x > self.threshold).astype(np.float32)
-        pretty_mask = self.beautify(x)
-        return pretty_mask
+        return x
 
 
     def beautify(self, x):

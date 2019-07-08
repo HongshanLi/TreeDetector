@@ -1,9 +1,11 @@
 {
-        "raw_img_mask": "raw_img_mask.csv",
+        "raw_data_path": "raw_data_path.csv",
         "proc_data": "proc_data/",
         "proc_imgs": "proc_data/imgs",
+        "proc_lidars": "proc_data/lidars",
         "proc_masks": "proc_data/masks",
-        "mean_std": "proc_data/mean_std.json",
+        "mean_std_rgb": "proc_data/mean_std_rgb.json",
+        "mean_std_lidar": "proc_data/mean_std_lidar.json",
         "raw_img_height" : 1250,
         "raw_img_width": 1250,
         "proc_img_height": 250,

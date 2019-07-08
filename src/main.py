@@ -7,7 +7,7 @@ import warnings
 import pickle
 import scipy.misc
 import json
-
+import shutil
 
 import torch
 import torch.nn as nn
@@ -51,6 +51,8 @@ parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
 parser.add_argument('--epochs', default=90, type=int, metavar='N',
                     help='number of total epochs to run')
 
+parser.add_argument('--debug', action='store_true',
+        help='use this flag to debug, no ckp or log will be saved')
 
 parser.add_argument('--train', action='store_true', 
                     help='train the model')
@@ -59,7 +61,7 @@ parser.add_argument('--pretrained', action='store_true',
 parser.add_argument('--batch-size', default=16, type=int,
                     metavar='N',
                     help='batch size')
-parser.add_argument('--learning-rate', default=0.1, type=float,
+parser.add_argument('--learning-rate', default=0.0001, type=float,
                     metavar='LR', help='initial learning rate', dest='lr')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
@@ -74,6 +76,8 @@ parser.add_argument('--resume', action='store_true',
 
 
 # evaluate
+parser.add_argument('--use-lidar', action='store_true',
+        help='use lidar image for post process')
 parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
                     help='evaluate model on validation set')
 parser.add_argument('--baseline', action='store_true',
@@ -92,7 +96,10 @@ parser.add_argument('--model-ckp', type=str, metavar="PATH",
         help='path to the model ckp')
 parser.add_argument('--image-dir', type=str, 
         metavar="PATH",
-        help='dir to store imgs to be masked')
+        help='dir of rgb images')
+parser.add_argument('--lidar-dir', type=str,
+        metavar="PATH",
+        help='dir of lidar images')
 parser.add_argument('--mask-dir', type=str, metavar="PATH",
         default='./masks',
         help='dir to save mask')
@@ -105,16 +112,33 @@ device = torch.device('cuda:0' if torch.cuda.is_available()
 # get project root directory
 ROOT=os.path.join("../", os.getcwd())
 
+print("Use Lidar: ", args.use_lidar)
 if args.model == 'resnet':
-    model = ResNetModel(args.pretrained)
-    CKPDIR = os.path.join(ROOT, 'resnet_ckps/')
-    LOGDIR = os.path.join(ROOT, 'resnet_logs/')
+    model = ResNetModel(
+            pretrained=args.pretrained,
+            use_lidar=args.use_lidar)
+    if args.use_lidar:
+        ckp_dir = 'resnet_lidar_ckps/'
+        log_dir = 'resnet_lidar_logs/'
+    else:
+        ckp_dir = 'resnet_ckps/'
+        log_dir = 'resnet_logs/'
 elif args.model == 'unet':
-    model = UNet()
-    CKPDIR = os.path.join(ROOT, 'unet_ckps/')
-    LOGDIR = os.path.join(ROOT, 'unet_logs/')
+    if args.use_lidar:
+        ckp_dir = 'unet_lidar_ckps/'
+        log_dir = 'unet_lidar_logs/'
+    else:
+        ckp_dir = 'unet_ckps/'
+        log_dir = 'unet_logs/'
+
+    model = UNet(use_lidar=args.use_lidar)    
 else:
     raise("model must either be resnet or unet")
+
+
+
+CKPDIR = os.path.join(ROOT, ckp_dir)
+LOGDIR = os.path.join(ROOT, log_dir)
 
 model.to(device)
 
@@ -161,10 +185,30 @@ def main():
     return
 
 def preprocess():
-    print('dividing raw images into subimages...')
-    prep.divide_raw_imgs_masks(config, root_dir=ROOT)
-    print('computing mean and standard deviation for the dataset...')
-    prep.compute_mean_std(config, root_dir=ROOT)
+    # directory of processed data 
+    proc_dir = os.path.join(ROOT, config['proc_data'])
+
+    if os.path.isdir(proc_dir):
+        print('proc_data/ already exists in root dir, do you want to overwrite it?')
+        x = input("Type y to overwrite, type any other string to exit: ")
+        if x == 'y':
+            shutil.rmtree(proc_dir)
+            os.makedirs(os.path.join(ROOT, config['proc_imgs']))
+            os.makedirs(os.path.join(ROOT, config['proc_lidars']))
+            os.makedirs(os.path.join(ROOT, config['proc_masks']))
+        else:
+            return
+    else:
+        os.makedirs(os.path.join(ROOT, config['proc_imgs']))
+        os.makedirs(os.path.join(ROOT, config['proc_lidar']))
+        os.makedirs(os.path.join(ROOT, config['proc_masks']))
+
+    print('====== dividing raw images into subimages ======')
+    prep.divide_raw_data(config, root_dir=ROOT)
+    print('====== Computing mean and standard deviation for the RGB images ======')
+    prep.compute_mean_std(config, root_dir=ROOT, data_type='rgb')
+    print('====== Computing mean and standard deviation for the LiDAR images ======')
+    prep.compute_mean_std(config, root_dir=ROOT, data_type='lidar')
     return
 
 def find_best_model():
@@ -181,9 +225,12 @@ def find_best_model():
     return 
 
 def evaluate():
-    transform, mask_transform = get_transform()
+    transform, lidar_transform, mask_transform = get_transform()
     test_dataset = TreeDataset(config['proc_data'], 
-            transform=transform, mask_transform=mask_transform,
+            transform=transform, 
+            lidar_transform=lidar_transform,
+            use_lidar=args.use_lidar,
+            mask_transform=mask_transform,
             purpose='test')
 
     # baseline
@@ -191,7 +238,8 @@ def evaluate():
         print('====== Baseline Performance ======')
         baseline = PixelThreshold(config['greenpixel'])
         evaluate_model(test_dataset, baseline,
-                threshold=args.threshold, device=torch.device('cpu'),
+                threshold=args.threshold, 
+                device=torch.device('cpu'),
                 batch_size=args.batch_size)
 
     print('====== CNN Model Performance ======')
@@ -199,7 +247,9 @@ def evaluate():
             torch.load(args.model_ckp, map_location=device))
 
     evaluate_model(test_dataset, model, 
-            threshold=args.threshold, device=device, 
+            threshold=args.threshold, 
+            use_lidar=args.use_lidar,
+            device=device, 
           batch_size=args.batch_size)
     return 
 
@@ -216,13 +266,17 @@ def predict():
             transforms.ToTensor(),
             ])
 
-        ds = TreeDatasetInf(args.image_dir, transform=transform)
+        ds = TreeDatasetInf(
+                img_dir=args.image_dir,
+                lidar_dir=args.lidar_dir,
+                transform=transform, 
+                lidar_transform=transform,
+                use_lidar=args.use_lidar)
+
         cleanup = CleanUp(threshold=args.threshold)
         for i in range(len(ds)):
-            img, img_name = ds[i]
+            img_name, img, lidar = ds[i]
 
-            # @TODO convert to batch parallelism
-            # normalize img
             mean = torch.mean(img, dim=(1,2))
             std = torch.std(img, dim=(1,2))
            
@@ -233,6 +287,12 @@ def predict():
             img = img.unsqueeze(0)
             img = img.to(device)
             mask = model(img)
+
+            if args.use_lidar:
+                lidar = lidar.to(device)
+                mask = mask*(1 - lidar)
+
+
             _,_,h,w = mask.shape
 
             mask = mask.view(h, w)
@@ -248,23 +308,28 @@ def predict():
     return
 
 def train():
-    transform, mask_transform = get_transform()
+    transform, lidar_transform, mask_transform = get_transform()
     
     # full dir for processed data
     proc_data = os.path.join(ROOT, config['proc_data'])
 
     train_dataset = TreeDataset(proc_data,
-            transform=transform, mask_transform=mask_transform,
+            transform=transform, 
+            lidar_transform=lidar_transform,
+            mask_transform=mask_transform,
+            use_lidar=args.use_lidar,
             purpose='train')
 
     val_dataset = TreeDataset(proc_data, 
-            transform=transform, mask_transform=mask_transform,
+            transform=transform, 
+            lidar_transform=lidar_transform,
+            mask_transform=mask_transform,
+            use_lidar=args.use_lidar,
             purpose='val')
 
     num_models = len(os.listdir(CKPDIR))
     if args.resume:
         lastest_model = 'model_{}.pth'.format(num_models)
-
         ckp_path = os.path.join(CKPDIR, lastest_model)
         model.load_state_dict(
                 torch.load(ckp_path, map_location=device))
@@ -273,20 +338,25 @@ def train():
         # start training from epoch 1 
         # remove all existing ckps
         start_epoch=1
-        if num_models > 1:
+
+        if num_models > 1 and args.debug==False:
             print("Removing existing ckps in {}, this may take a while.".format(CKPDIR))
             for ckp in os.listdir(CKPDIR):
                 os.remove(os.path.join(CKPDIR, ckp))
 
-
     criterion = Criterion()
-    trainer = Trainer(train_dataset=train_dataset,
+    trainer = Trainer(
+            train_dataset=train_dataset,
             val_dataset=val_dataset, 
-            model=model, criterion=criterion,
+            model=model, 
+            criterion=criterion,
             ckp_dir = CKPDIR,
             log_dir = LOGDIR,
+            debug=args.debug,
+            use_lidar=args.use_lidar,
             batch_size=args.batch_size,
             lr=args.lr,
+            weight_decay=args.weight_decay,
             threshold=args.threshold,
             start_epoch=start_epoch,
             resume=args.resume,
@@ -294,15 +364,21 @@ def train():
             print_freq=args.print_freq)
 
     for epoch in range(start_epoch, start_epoch + args.epochs):
+        start = time.time()
         trainer(epoch)
         trainer.validate(epoch)
-        trainer.logger.save_log()
+        end = time.time()
+
+        print("Time to train one epoch is: {:0.2f}".format(end - start))
+        if args.debug==False:
+            trainer.logger.save_log()
+
     return 
 
 def get_transform():
     # get mean and std of the dataset
-    mean_std_path = os.path.join(ROOT, config['mean_std'])
-    with open(mean_std_path, 'r') as f:
+    mean_std_rgb = os.path.join(ROOT, config['mean_std_rgb'])
+    with open(mean_std_rgb, 'r') as f:
         mean_std = json.load(f)
 
     transform = transforms.Compose([
@@ -311,10 +387,21 @@ def get_transform():
             tuple(mean_std['mean']),
             tuple(mean_std['std'])
             )])
+
+
+    mean_std_lidar = os.path.join(ROOT, config['mean_std_lidar'])
+    with open(mean_std_lidar, 'r') as f:
+        mean_std = json.load(f)
+
+    lidar_transform = transforms.Compose([
+        transforms.ToTensor(),
+        ])
+
+    
     mask_transform = transforms.Compose([
         transforms.ToTensor(),
         ])
-    return transform, mask_transform
+    return transform, lidar_transform, mask_transform
 
 
 if __name__=="__main__":  

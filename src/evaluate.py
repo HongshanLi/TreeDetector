@@ -8,6 +8,7 @@ def evaluate_model(test_dataset, model, **kwargs):
     device = kwargs['device']
     batch_size = kwargs['batch_size']
     threshold=kwargs['threshold']
+    use_lidar=kwargs['use_lidar']
 
     loader = DataLoader(test_dataset, 
             batch_size=batch_size,
@@ -17,16 +18,17 @@ def evaluate_model(test_dataset, model, **kwargs):
         avg_acc = 0
         avg_iou = 0
         avg_cm = {'TP': 0, 'TN': 0, 'FP': 0, 'FN': 0}
-        for step, (img, mask) in enumerate(loader):
+        for step, (img, lidar, mask) in enumerate(loader):
             step = step + 1    
 
             start = time.time()
             img = img.to(device)
             mask = mask.to(device)
+            lidar=lidar.to(device)
 
-            output = model(img)
-
+            output = model(img, lidar)
             end = time.time()
+
             
             # Pixel Acc
             acc = utils.pixelwise_accuracy(output, 
