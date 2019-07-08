@@ -5,9 +5,12 @@ import torch.nn.functional as F
 from .unet_parts import *
 
 class UNet(nn.Module):
-    def __init__(self, n_channels=3, n_classes=1):
+    def __init__(self, use_lidar, n_channels=3, n_classes=1):
         super(UNet, self).__init__()
         self.model_name = 'unet'
+
+        self.use_lidar = use_lidar
+
         self.inc = inconv(n_channels, 64)
         self.down1 = down(64, 128)
         self.down2 = down(128, 256)
@@ -19,7 +22,7 @@ class UNet(nn.Module):
         self.up4 = up(128, 64)
         self.outc = outconv(64, n_classes)
 
-    def forward(self, x):
+    def forward(self, x, lidar):
         x1 = self.inc(x)
         x2 = self.down1(x1)
         x3 = self.down2(x2)

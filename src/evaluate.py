@@ -24,15 +24,11 @@ def evaluate_model(test_dataset, model, **kwargs):
             start = time.time()
             img = img.to(device)
             mask = mask.to(device)
+            lidar=lidar.to(device)
 
-
-            output = model(img)
+            output = model(img, lidar)
             end = time.time()
 
-            # post process with lidar image
-            if use_lidar:
-                lidar = lidar.to(device)
-                output = output*(1 - lidar)
             
             # Pixel Acc
             acc = utils.pixelwise_accuracy(output, 

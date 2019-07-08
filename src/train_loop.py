@@ -94,6 +94,7 @@ class Trainer(object):
         self.log_dir = kwargs['log_dir']
         self.batch_size = kwargs['batch_size']
         self.lr = kwargs['lr']
+        self.weight_decay = kwargs['weight_decay']
         self.resume = kwargs['resume']
         self.threshold = kwargs['threshold']
         self.print_freq = kwargs['print_freq']
@@ -113,7 +114,7 @@ class Trainer(object):
 
         self.criterion = criterion
         self.optimizer = optim.Adam(self.model.parameters(), 
-                lr=self.lr, weight_decay=1e-5)
+                lr=self.lr, weight_decay=self.weight_decay)
 
         self.logger = Logger(log_dir=self.log_dir, 
                 resume=self.resume)
@@ -145,8 +146,7 @@ class Trainer(object):
             try:
                 self.optimizer.zero_grad()
                 output = self.model(feature, lidar)
-                bg_l, tree_l= self.criterion(output, mask)
-                loss = bg_l + tree_l
+                loss = self.criterion(output, mask)
                 loss.backward()
                 self.optimizer.step()
 
@@ -165,8 +165,8 @@ class Trainer(object):
 
                     _print(epoch=epoch, epochs=epochs, 
                             step=step, steps=self.total_steps,
-                            loss=loss, acc=acc, tree_l=tree_l,
-                            bg_l=bg_l, TP=cm['TP'], TN=cm['TN'],
+                            loss=loss, acc=acc,
+                            TP=cm['TP'], TN=cm['TN'],
                             FP=cm['FP'], FN=cm['FN'])
 
             # if KeyboardInterrupt happens during training
@@ -202,8 +202,8 @@ class Trainer(object):
                 mask = mask.to(self.device)
 
                 output = self.model(feature, lidar)
-                bg_l, tree_l = self.criterion(output, mask)
-                loss = bg_l + tree_l
+                loss = self.criterion(output, mask)
+        
 
                 acc = utils.pixelwise_accuracy(output, mask, 
                     threshold=self.threshold)

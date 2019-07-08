@@ -7,23 +7,8 @@ class Criterion(object):
     imbalance between tree and non-tree pixel
     '''
     def __call__(self, output, target):
-        num_tree, num_bg = self.find_pixels(target)
-
-        # target =1 => background
-        # loss for miss-classified background
-        bg = (output - target)*target
-        bg = bg**2
-        bg = torch.mean(bg)
-
-        # loss for miss-classified tree
-        tree = (output - target)*(1 - target)
-        tree = tree**2
-        tree = torch.mean(tree)
-
-        # balance tree and bg pixels
-        #loss = num_tree*bg + num_bg*tree
-        #loss = torch.mean(loss)
-        return bg, tree
+        loss = F.mse_loss(output, target)
+        return loss
 
     def find_pixels(self, target):
         '''compute the number of tree and non-tree pixels'''

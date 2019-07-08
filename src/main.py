@@ -61,7 +61,7 @@ parser.add_argument('--pretrained', action='store_true',
 parser.add_argument('--batch-size', default=16, type=int,
                     metavar='N',
                     help='batch size')
-parser.add_argument('--learning-rate', default=0.1, type=float,
+parser.add_argument('--learning-rate', default=0.0001, type=float,
                     metavar='LR', help='initial learning rate', dest='lr')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
@@ -112,8 +112,11 @@ device = torch.device('cuda:0' if torch.cuda.is_available()
 # get project root directory
 ROOT=os.path.join("../", os.getcwd())
 
+print("Use Lidar: ", args.use_lidar)
 if args.model == 'resnet':
-    model = ResNetModel(args.pretrained, args.use_lidar)
+    model = ResNetModel(
+            pretrained=args.pretrained,
+            use_lidar=args.use_lidar)
     if args.use_lidar:
         ckp_dir = 'resnet_lidar_ckps/'
         log_dir = 'resnet_lidar_logs/'
@@ -128,8 +131,7 @@ elif args.model == 'unet':
         ckp_dir = 'unet_ckps/'
         log_dir = 'unet_logs/'
 
-    model = UNet(use_lidar=args.use_lidar)
-    
+    model = UNet(use_lidar=args.use_lidar)    
 else:
     raise("model must either be resnet or unet")
 
@@ -354,6 +356,7 @@ def train():
             use_lidar=args.use_lidar,
             batch_size=args.batch_size,
             lr=args.lr,
+            weight_decay=args.weight_decay,
             threshold=args.threshold,
             start_epoch=start_epoch,
             resume=args.resume,

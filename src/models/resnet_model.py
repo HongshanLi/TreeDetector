@@ -88,11 +88,10 @@ class ResNetModel(nn.Module):
     def forward(self, x, lidar=None):
         x = self.fe(x)
         x = self.mask(x)
-
+        
         if self.use_lidar:
             x = torch.cat([x, lidar], dim=1)
             x = self.post_process(x)
-
         return x
 
 
