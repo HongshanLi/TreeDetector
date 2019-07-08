@@ -260,10 +260,7 @@ def train():
     val_dataset = TreeDataset(proc_data, 
             transform=transform, mask_transform=mask_transform,
             purpose='val')
-    i,t = train_dataset[0]
-    print(i.shape, t.shape)
 
-    '''
     num_models = len(os.listdir(CKPDIR))
     if args.resume:
         lastest_model = 'model_{}.pth'.format(num_models)
@@ -300,7 +297,6 @@ def train():
         trainer(epoch)
         trainer.validate(epoch)
         trainer.logger.save_log()
-        '''
     return 
 
 def get_transform():
