@@ -1,7 +1,7 @@
 import os
 import csv
 
-raw_data_dir='/mnt/efs/Trees/'
+raw_data_dir='../sample_raw_data'
 f = open("../raw_data_path.csv", "w")
 writer = csv.writer(f)
 data_types = ['_RGB-Ir.tif', '_DSM.tif', '_TREE.png']
@@ -13,6 +13,7 @@ for subdir in os.listdir(raw_data_dir):
 
         line = [os.path.join(subdir, data, d) for d in line]
         writer.writerow(line)
+
 
 f.close()
 

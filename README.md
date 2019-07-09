@@ -98,6 +98,8 @@ To train unet-based model , run
 python src/main.py --train --model=unet --epochs=[num of epochs to train]
 ```
 
+
+
 #### Train extended pipeline
 To train extended pipelien, add `--use-lidar` flag, for example, to train 
 resnet-based model using extended pipeline
