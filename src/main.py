@@ -26,7 +26,7 @@ import torchvision.models as models
 
 import preprocess as prep
 from dataset import TreeDataset, TreeDatasetInf
-from models import ResNetModel, UNet
+from models import ResNetModel, UNet, ResNetModelLidar
 from criterion import Criterion
 from train_loop import Trainer
 from post_process import CleanUp
@@ -56,6 +56,9 @@ parser.add_argument('--debug', action='store_true',
 
 parser.add_argument('--train', action='store_true', 
                     help='train the model')
+parser.add_argument('--stage-1-ckp', type=str, metavar='PATH',
+        help='ckp path for stage 1 model')
+
 parser.add_argument('--pretrained', action='store_true',
                     help="use pretrained resnet152")
 parser.add_argument('--batch-size', default=16, type=int,
@@ -115,14 +118,16 @@ ROOT=os.path.join("../", os.getcwd())
 print("Use Lidar: ", args.use_lidar)
 if args.model == 'resnet':
     model = ResNetModel(
-            pretrained=args.pretrained,
-            use_lidar=args.use_lidar)
+            pretrained=args.pretrained)
     if args.use_lidar:
         ckp_dir = 'resnet_lidar_ckps/'
         log_dir = 'resnet_lidar_logs/'
+        model = ResNetModelLidar()
     else:
+        model = ResNetModel(pretrained=args.pretrained)
         ckp_dir = 'resnet_ckps/'
         log_dir = 'resnet_logs/'
+
 elif args.model == 'unet':
     if args.use_lidar:
         ckp_dir = 'unet_lidar_ckps/'
@@ -327,6 +332,13 @@ def train():
             use_lidar=args.use_lidar,
             purpose='val')
 
+    if args.use_lidar and args.stage_1_ckp:
+        print("======Loading state dict for stage 1======")
+        model.stage_1.load_state_dict(torch.load(
+            args.stage_1_ckp, map_location=device))
+
+
+
     num_models = len(os.listdir(CKPDIR))
     if args.resume:
         lastest_model = 'model_{}.pth'.format(num_models)
@@ -343,6 +355,9 @@ def train():
             print("Removing existing ckps in {}, this may take a while.".format(CKPDIR))
             for ckp in os.listdir(CKPDIR):
                 os.remove(os.path.join(CKPDIR, ckp))
+    
+    
+
 
     criterion = Criterion()
     trainer = Trainer(

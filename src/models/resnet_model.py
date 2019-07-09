@@ -71,29 +71,35 @@ class Mask(nn.Module):
 
 class ResNetModel(nn.Module):
     '''final model for creating tree mask for 2d RGB images'''
-    def __init__(self, pretrained, use_lidar):
+    def __init__(self, pretrained):
         super(ResNetModel, self).__init__()
         self.model_name='resnet'
-
-        self.use_lidar = use_lidar
 
         # feature extractor
         self.fe = ResNetFE(pretrained)
         self.mask = Mask()
 
-        if self.use_lidar:
-            self.post_process = PostProcess()
         
     
-    def forward(self, x, lidar=None):
+    def forward(self, x):
         x = self.fe(x)
         x = self.mask(x)
         
-        if self.use_lidar:
-            x = torch.cat([x, lidar], dim=1)
-            x = self.post_process(x)
         return x
 
 
+class ResNetModelLidar(nn.Module):
+    def __init__(self):
+        super(ResNetModelLidar, self).__init__()
+        self.stage_1 = ResNetModel(pretrained=False)
+        
+        self.stage_2 = PostProcess()
 
+    def forward(self, rgb, lidar):
+        x = self.stage_1(rgb)
+        
+        x = torch.cat([x, lidar], dim=1)
+        x = self.stage_2(x)
+        return x
 
+        

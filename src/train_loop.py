@@ -4,7 +4,7 @@ import torch.optim as optim
 import os
 import pickle
 import utils
-
+import time
 
 def _save_checkpoint(state_dict, ckp_path):
     torch.save(state_dict, ckp_path)
@@ -113,7 +113,17 @@ class Trainer(object):
         self.model = model.train().to(self.device)
 
         self.criterion = criterion
-        self.optimizer = optim.Adam(self.model.parameters(), 
+        
+        # freeze weight for stage 1 if training with lidar
+        if self.use_lidar:
+            print("======= Freezing weight for stage 1 model ======")
+            for param in self.model.stage_1.parameters():
+                param.requires_grad = False
+
+
+        self.optimizer = optim.Adam(
+                filter(lambda p: p.requires_grad, 
+                    self.model.parameters()), 
                 lr=self.lr, weight_decay=self.weight_decay)
 
         self.logger = Logger(log_dir=self.log_dir, 
@@ -136,8 +146,11 @@ class Trainer(object):
 
         train_loss = 0
         train_acc = 0
+        start = time.time()
+        num_imgs = 0
         for step, (feature, lidar, mask) in enumerate(self.train_loader):
             step = step + 1
+            num_imgs = num_imgs + feature.shape[0]
             
             feature = feature.to(self.device)
             lidar = lidar.to(self.device)
@@ -145,7 +158,7 @@ class Trainer(object):
 
             try:
                 self.optimizer.zero_grad()
-                output = self.model(feature, lidar)
+                output = self.model(feature)
                 loss = self.criterion(output, mask)
                 loss.backward()
                 self.optimizer.step()
@@ -163,11 +176,15 @@ class Trainer(object):
                     epochs = self.start_epoch + self.epochs-1
                     cm = utils.confusion_matrix(output, mask)
 
+                    end = time.time()
+                    speed = num_imgs / (end - start)
+
                     _print(epoch=epoch, epochs=epochs, 
                             step=step, steps=self.total_steps,
                             loss=loss, acc=acc,
                             TP=cm['TP'], TN=cm['TN'],
-                            FP=cm['FP'], FN=cm['FN'])
+                            FP=cm['FP'], FN=cm['FN'],
+                            img_per_sec=speed)
 
             # if KeyboardInterrupt happens during training
             # remove logs from current epoch and save the

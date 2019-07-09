@@ -8,7 +8,10 @@ def evaluate_model(test_dataset, model, **kwargs):
     device = kwargs['device']
     batch_size = kwargs['batch_size']
     threshold=kwargs['threshold']
-    use_lidar=kwargs['use_lidar']
+    try:
+        use_lidar=kwargs['use_lidar']
+    except:
+        use_lidar=False
 
     loader = DataLoader(test_dataset, 
             batch_size=batch_size,
@@ -18,16 +21,20 @@ def evaluate_model(test_dataset, model, **kwargs):
         avg_acc = 0
         avg_iou = 0
         avg_cm = {'TP': 0, 'TN': 0, 'FP': 0, 'FN': 0}
+        start = time.time()
+        num_imgs = 0
         for step, (img, lidar, mask) in enumerate(loader):
-            step = step + 1    
+            step = step + 1
+            num_imgs = num_imgs + img.shape[0]
 
-            start = time.time()
             img = img.to(device)
             mask = mask.to(device)
             lidar=lidar.to(device)
-
-            output = model(img, lidar)
-            end = time.time()
+            
+            if use_lidar:
+                output = model(img, lidar)
+            else:
+                output = model(img)
 
             
             # Pixel Acc
@@ -47,9 +54,10 @@ def evaluate_model(test_dataset, model, **kwargs):
             
             msg = "Step : {}, Acc : {:0.3f}".format(step, acc)
             msg = msg + " IOU : {:0.3}".format(iou)
-            msg = msg + " Speed: {:0.2f} imgs/ sec".format(
-                    img.shape[0] / (end - start) )
             print(msg)
+
+        end = time.time()
+        print("Processed {} images in {:0.2f} seconds".format(num_imgs, (end - start)))
         
         avg_acc = avg_acc / step 
         avg_iou = avg_iou / step 

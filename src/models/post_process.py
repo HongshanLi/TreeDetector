@@ -14,7 +14,7 @@ class PostProcess(nn.Module):
                 nn.ReLU())
 
         layers = []
-        for i in range(10):
+        for i in range(1):
             layers.append(block)
         
         self.layers = nn.Sequential(*layers)
