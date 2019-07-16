@@ -9,12 +9,26 @@ The project demo can be found [here](https://docs.google.com/presentation/d/1hNJ
 The deep learning models in this project are 
 developed in Pytorch 1.1.0
 
-## Setup
+## Setup (in conda environment)
+### Create a conda environment
+```
+conda create -n TreeDect python=3.6.5
+```
+### Use the environment
+```
+conda activate TreeDect
+```
+
+### Clone the repo and Install dependencies
 ```
 git clone https://github.com/HongshanLi/TreeDetector
 cd TreeDetector
 pip install -r requirements.txt
 ```
+
+### Install Pytorch and Torchvision
+The Pytorch package you will install depends on the device and
+the CUDA driver you have. Please refer [here](https://pytorch.org/get-started/locally/) for installation detail.
 
 ## Data
 The relavant raw data I used are provided by the company providing
