@@ -1,5 +1,5 @@
 # TreeDetector: Predict tree coverage via deep learning
-This is the consulting project I worked on at Insight Data Science as
+This is a consulting project I worked on at Insight Data Science as
 an Artificial Intelligence Fellow. The goal of this project is 
 to segment trees from 2D RGB imagery.
 
@@ -28,10 +28,10 @@ pip install -r requirements.txt
 
 ### Install Pytorch and Torchvision
 The Pytorch package you will install depends on the device and
-the CUDA driver you have. Please refer [here](https://pytorch.org/get-started/locally/) for installation detail.
+the CUDA driver you have. Please refer [here](https://pytorch.org/get-started/locally/) for installation details.
 
 ## Data
-The relavant raw data I used are provided by the company providing
+The relevant raw data I used are provided by the company providing
 this consulting project.
 It consists of 1250 x 1250 RGBA aerial imagery, 
 point-cloud LiDAR imagery,
@@ -40,13 +40,13 @@ They are proprietary to the consulting company, so I cannot release them.
 
 
 
-### preprocess
-Pre-process consists of:
+### Preprocess
+Preprocess consists of:
 - Divide 1250x1250 RGBA images into 25 250x250 sub-images
 - Remove the A channel from the images
 - Divide 1250x1250 LiDAR image into 25 250x250 sub-images
 - Divide 1250x1250 masks into 25 250x250 sub-masks
-- Compute mean and standard deviation of the input images after divide pixel value by 255 (channel-wise, as float32) 
+- Compute the mean and standard deviation of the input images after divide pixel value by 255 (channel-wise, as float32) 
 I divided the images into subimages because it is too big for the model.
 More precisely, when the model is doing a forward pass on even
 one image, it will require more GPU memory than the one I was
@@ -57,7 +57,7 @@ then I only need to piece
 together the submasks to get the mask for the whole images.
 
 To preprocess the data, create a file `raw_data_path.csv` in the project
-root directory. The `raw_data_path.csv` file needs to consists of three
+root directory. The `raw_data_path.csv` file needs to consist of three
 columns. Put full path of the RGBA image in the first column, full path 
 of LiDAR image in the second column, and full path of mask 
 in the third column.
@@ -76,12 +76,12 @@ Then you should see `proc_data/` in the project repo.
 
 ## Pipeline
 Only RGB images will be used for the pipeline in master branch.
-Another pipeline that incorperates LiDAR images in `use_lidar`
+Another pipeline that incorporates LiDAR images in `use_lidar`
 branch.
 
 
 ## Models
-CNN is used to extract features from image. For this project, I have 
+CNN is used to extract features from images. For this project, I have 
 two models to create masks, one uses ResNet152 as a backbone feature
 extractor, the other one is a U-net.
 
@@ -158,6 +158,24 @@ save the predicted masks in `static/masks/`, do
 python src/main.py --predict --model=resnet --model=resnet_ckps/model_10.pth \
         --image-dir=static/images/ --mask-dir=static/masks/
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
