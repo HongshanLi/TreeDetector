@@ -8,7 +8,6 @@ def evaluate_model(test_dataset, model, **kwargs):
     device = kwargs['device']
     batch_size = kwargs['batch_size']
     threshold=kwargs['threshold']
-    use_lidar=kwargs['use_lidar']
 
     loader = DataLoader(test_dataset, 
             batch_size=batch_size,
