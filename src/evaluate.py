@@ -17,15 +17,14 @@ def evaluate_model(test_dataset, model, **kwargs):
         avg_acc = 0
         avg_iou = 0
         avg_cm = {'TP': 0, 'TN': 0, 'FP': 0, 'FN': 0}
-        for step, (img, lidar, mask) in enumerate(loader):
+        for step, (img, _ , mask) in enumerate(loader):
             step = step + 1    
 
             start = time.time()
             img = img.to(device)
             mask = mask.to(device)
-            lidar=lidar.to(device)
 
-            output = model(img, lidar)
+            output = model(img)
             end = time.time()
 
             

@@ -119,7 +119,7 @@ You can configure the training process by adding more flags
 ## Evaluate
 To find the checkpoint with the best validation accuracy, do
 ```
-python src/main.py --find-best-model
+python src/main.py --find-best-model --model=[reset or unet]
 ```
 
 To evaluate the model performance on test set, do
@@ -152,11 +152,11 @@ python src/main.py --predict --model=[resnet or unet] \
         --mask-dir=[directory of predicted masks]
 ```
 For examples, if you want to use resnet model with checkpoint trained after 10th epoch,
-the images you want to draw masks on are saved in `images/` and you want to 
-save the predicted masks in `masks/`, do
+the images you want to draw masks on are saved in `static/images/` and you want to 
+save the predicted masks in `static/masks/`, do
 ```
 python src/main.py --predict --model=resnet --model=resnet_ckps/model_10.pth \
-        --image-dir=images/ --mask-dir=masks/
+        --image-dir=static/images/ --mask-dir=static/masks/
 ```
 
 
