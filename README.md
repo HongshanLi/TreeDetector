@@ -130,19 +130,38 @@ lawns are green, and trees in winter are typically not green.
 
 
 ## Inference
+I will explain how to make inference using Resnet-based model.
+
+As the model is trained on the proprietary data from the consulting 
+company, I cannot publish the trained models on the full training 
+set. But if you are interested in running inference without training
+the models on your own dataset, you can download the trained checkpoint
+of Resnet-based model on the sample data [here](s3://hongshan-public/model_10.pth)
+It is the checkpoint after 10 epochs of training on sample images.
+
+Then create a directory `resnet_ckps/` in the project directory
+```
+mkdir resnet_ckps
+```
+and move the downloaded checkpoint in `resnet_ckps/`.
+
+If you trained the Resnet-based model on your own dataset,
+the training process will automatically create `resnet_ckps/`
+directory and save all checkpoints there.
+
 To create mask on images, do
 ```
-python src/main.py --predict --model=[resnet or unet] \
+python src/main.py --predict --model=resnet \
         --model-ckps=[path to model ckp] \
         --image-dir=[directory of RGB imgs] \
         --mask-dir=[directory of predicted masks]
 ```
-For examples, if you want to use resnet model with checkpoint trained after 10th epoch,
-the images you want to draw masks on are saved in `images/` and you want to 
-save the predicted masks in `masks/`, do
+For examples, if you want to use Resnet-based model with checkpoint trained after 10th epoch,
+the images you want to draw masks on are saved in `static/images/` and you want to 
+save the predicted masks in `static/masks/`, do
 ```
 python src/main.py --predict --model=resnet --model=resnet_ckps/model_10.pth \
-        --image-dir=images/ --mask-dir=masks/
+        --image-dir=static/images/ --mask-dir=static/masks/
 ```
 
 
