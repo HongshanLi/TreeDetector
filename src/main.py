@@ -200,7 +200,7 @@ def preprocess():
             return
     else:
         os.makedirs(os.path.join(ROOT, config['proc_imgs']))
-        os.makedirs(os.path.join(ROOT, config['proc_lidar']))
+        os.makedirs(os.path.join(ROOT, config['proc_lidars']))
         os.makedirs(os.path.join(ROOT, config['proc_masks']))
 
     print('====== dividing raw images into subimages ======')
@@ -301,8 +301,8 @@ def predict():
             mask = cleanup(mask)
             
 
-            scipy.misc.imsave(
-                    os.path.join(args.mask_dir, img_name), mask
+            mask.save(
+                    os.path.join(args.mask_dir, img_name)
                     )
     
     return
