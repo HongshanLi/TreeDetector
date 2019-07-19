@@ -150,7 +150,7 @@ As the model is trained on the proprietary data from the consulting
 company, I cannot publish the trained models on the full training 
 set. But if you are interested in running inference without training
 the models on your own dataset, you can download the trained checkpoint
-of Resnet-based model on the sample data [here](s3://hongshan-public/model_10.pth)
+of Resnet-based model on the sample data [here](https://hongshan-public.s3-us-west-2.amazonaws.com/model_10.pth)
 It is the checkpoint after 10 epochs of training on sample images.
 
 Then create a directory `resnet_ckps/` in the project directory
