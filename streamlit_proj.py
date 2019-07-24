@@ -1,0 +1,154 @@
+'''Display images and predicted masks using streamlit'''
+import torch
+import torchvision.transforms as transforms
+
+import numpy as np
+import streamlit as st
+import os
+import argparse
+import skimage.io as io
+import src.utils as utils
+import torch
+import numpy as np
+from PIL import Image
+from src.models import ResNetModel
+from src.post_process import CleanUp
+
+
+
+def show_header(name, **links):
+    links = ' | '.join('[%s](%s)' % (key, url) for key, url in links.items())
+    st.write(
+    """
+    <span style="display:inline-block;padding-left:0px;padding-bottom:20px;font-size:3rem;vertical-align:bottom">%s</span>
+
+    %s
+    """ % (name, links))
+
+show_header("Hongshan's Insight Project",
+    github='https://github.com/HongshanLi/TreeDetector',
+    linkedin='https://www.linkedin.com/in/hongshanli/',
+)
+
+
+@st.cache
+def load_image(filename):
+    img = io.imread("sample_raw_data/037185-0_RGB-Ir.tif")
+    large_image = img[:,:,0:3]
+    small_image = Image.fromarray(large_image)
+    small_image.thumbnail((250, 250))
+    small_image = np.array(small_image)
+    return large_image, small_image
+
+
+@st.cache
+def init_clean_up():
+    return CleanUp()
+
+cleanup = CleanUp(threshold=0.5)
+
+img, thumbnail = load_image("sample_raw_data/037185-0_RGB-Ir.tif")
+#st.write(img.shape)
+#st.write(thumbnail.shape)
+st.image(img, width=600)
+
+x = st.slider('X offset', 0, 0, 1000, 1)
+y = st.slider('Y offset', 0, 0, 1000, 1)
+
+sub_img = img[x:x+250, y:y+250, :]
+
+
+model = ResNetModel(pretrained=False,use_lidar=False)
+model.load_state_dict(
+        torch.load('resnet_real_ckps/model_9.pth'))
+
+
+device = torch.device('cuda:0' if torch.cuda.is_available()
+        else 'cpu')
+model.to(device)
+
+# normalize the image
+x = sub_img.astype(np.float32)
+
+transform = transforms.Compose([
+    transforms.ToTensor()
+    ])
+
+x = transform(x)
+mean = torch.mean(x, dim=(1,2))
+std = torch.std(x, dim=(1,2))
+
+mean = mean.view(3, 1, 1)
+std = std.view(3, 1, 1)
+
+x = (x - mean) / std
+
+x = x.unsqueeze(0)
+
+x = x.to(device)
+mask = model(x)
+
+
+_,_,h,w = mask.shape
+
+mask = mask.view(h,w)
+mask = mask.detach().cpu().numpy()
+
+mask = cleanup(mask)
+st.image([sub_img, mask])
+#st.button(label="test")
+#x = st.slider(label="x coordinate of the crop center")
+#y = st.slider(label="y coordinate of the crop center")
+#st.write(x, y)
+
+
+
+
+def pixelwise_accuracy(mask, target):
+    '''compute pixelwise accuracy
+        Args:
+            mask (np.float32): black and white mask
+            black = object, white = background
+            target (np.float32): ...
+    '''
+    correct = (mask == target).astype(np.float32)
+
+    acc = np.sum(correct) / (mask.shape[0]*mask.shape[1])
+    return acc.item()
+
+def compute_iou(mask, target):
+    '''compute intersection over union
+        Args:
+            mask (np.float32): black and white mask
+            black = object, white = background
+            target (np.float32): ...
+    
+    '''
+    # make object have pixel value 1
+    mask = (mask == 0).astype(np.float32)
+    target = (target == 0).astype(np.float32)
+
+    intersection = mask*target
+
+    union = mask + target - intersection
+
+    iou = np.sum(intersection) / np.sum(union)
+    return iou.item()
+
+
+
+
+def get_background(img):
+    '''
+    Args:
+        img (np.uint8): input image
+    Return (np.float32): mask of objects in the image
+    white pixel for background, black pixel for non-background
+    pixel value is normalized between [0, 1]
+    '''
+    img = img.astype(np.float32)
+    img = np.mean(img, axis=2)
+    img = img / 255
+    img = (img == 1).astype(np.float32)
+    return img
+
