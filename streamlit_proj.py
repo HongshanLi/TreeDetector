@@ -14,22 +14,31 @@ from PIL import Image
 from src.models import ResNetModel
 from src.post_process import CleanUp
 
-
-
-def show_header(name, **links):
+def show_header(name, avatar_image_url, **links):
     links = ' | '.join('[%s](%s)' % (key, url) for key, url in links.items())
     st.write(
     """
-    <span style="display:inline-block;padding-left:0px;padding-bottom:20px;font-size:3rem;vertical-align:bottom">%s</span>
-
+    <img src="%s" style="border-radius:50%%;height:100px;vertical-align:text-bottom;padding-bottom:10px"/>
+<span style="display:inline-block;padding-left:10px;padding-bottom:20px;font-size:3rem;vertical-align:bottom">%s</span>
     %s
-    """ % (name, links))
+    """ % (avatar_image_url, name, links))
 
-show_header("Hongshan's Insight Project",
+
+show_header(
+    avatar_image_url="https://hongshan-public.s3-us-west-2.amazonaws.com/hongshan_headshot_icon.png",
+    name="Hongshan Li",
     github='https://github.com/HongshanLi/TreeDetector',
     linkedin='https://www.linkedin.com/in/hongshanli/',
 )
 
+st.markdown("# Welcome to TreeDector")
+
+
+st.write(
+        "This is the Streamlit demo of the deep project I completed as an Artificial Intelligence Fellow at Insight Data Science. \
+        The goal of the project is to train a deep learning model that can segment \
+        trees from 2D aerial imagery. My best performing model uses ResNet152 as backbone feature extractor.\
+        You can play with the model and see it in action here.")
 
 @st.cache
 def load_image(filename):
@@ -48,29 +57,41 @@ def init_clean_up():
 cleanup = CleanUp(threshold=0.5)
 
 img, thumbnail = load_image("sample_raw_data/037185-0_RGB-Ir.tif")
-st.write(img.shape)
-st.write(thumbnail.shape)
+#st.write(img.shape)
+#st.write(thumbnail.shape)
 #st.image(img, width=600)
+
+
+st.write("The image below comes from the test set:")
 st.image(thumbnail)
+
+st.write("You can crop a 250 x 250 sub-image from it by moving the slide bar below. The x and y value from the slide bar will be the x and y offsets (the coordinates of the top-left corner) of the sub-image:")
 
 x = st.slider('X offset', 0, 0, 1000, 1)
 y = st.slider('Y offset', 0, 0, 1000, 1)
 
-sub_img = thumbnail[y:y+250, x:x+250, :]
+st.write("Once you cropped the image, the model will draw a contour (in red) around the place, where it thinks has trees.")
+         
 
-
-model = ResNetModel(pretrained=False,use_lidar=False)
-model.load_state_dict(
-        torch.load('resnet_real_ckps/model_9.pth'))
+sub_img = img[y:y+250, x:x+250, :]
 
 
 device = torch.device('cuda:0' if torch.cuda.is_available()
         else 'cpu')
-model.to(device)
+@st.cache
+def load_model():
+    model = ResNetModel(pretrained=False,use_lidar=False)
+    model.load_state_dict(
+            torch.load('resnet_real_ckps/model_9.pth'))
+
+
+    model.to(device)
+    return model
 
 # normalize the image
-x = sub_img.astype(np.float32)
 
+model = load_model()
+x = sub_img.astype(np.float32)
 transform = transforms.Compose([
     transforms.ToTensor()
     ])
@@ -108,7 +129,7 @@ composite = sub_img * mask + red*(1- mask)
 st.image(composite)
 # stack mask on top of image
 
-st.image([mask])
+#st.image([mask])
 #st.button(label="test")
 #x = st.slider(label="x coordinate of the crop center")
 #y = st.slider(label="y coordinate of the crop center")
