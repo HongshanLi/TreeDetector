@@ -19,7 +19,8 @@ def show_header(name, avatar_image_url, **links):
     st.write(
     """
     <img src="%s" style="border-radius:50%%;height:100px;vertical-align:text-bottom;padding-bottom:10px"/>
-<span style="display:inline-block;padding-left:10px;padding-bottom:20px;font-size:3rem;vertical-align:bottom">%s</span>
+    <span style="display:inline-block;padding-left:10px;padding-bottom:20px;font-size:3rem;vertical-align:bottom">%s</span>
+    
     %s
     """ % (avatar_image_url, name, links))
 
@@ -63,7 +64,7 @@ img, thumbnail = load_image("sample_raw_data/037185-0_RGB-Ir.tif")
 
 
 st.write("The image below comes from the test set:")
-st.image(thumbnail)
+st.image(thumbnail, use_column_width=True, caption="sample image from test set (not used in training)")
 
 st.write("You can crop a 250 x 250 sub-image from it by moving the slide bar below. The x and y value from the slide bar will be the x and y offsets (the coordinates of the top-left corner) of the sub-image:")
 
@@ -74,7 +75,8 @@ st.write("Once you cropped the image, the model will draw a contour (in red) aro
          
 
 sub_img = img[y:y+250, x:x+250, :]
-
+result_caption="Running the detector in realtime."
+result = st.image(sub_img, width=250, caption=result_caption)
 
 device = torch.device('cuda:0' if torch.cuda.is_available()
         else 'cpu')
@@ -82,7 +84,7 @@ device = torch.device('cuda:0' if torch.cuda.is_available()
 def load_model():
     model = ResNetModel(pretrained=False,use_lidar=False)
     model.load_state_dict(
-            torch.load('resnet_real_ckps/model_9.pth'))
+            torch.load('resnet_real_ckps/model_9.pth', map_location=device))
 
 
     model.to(device)
@@ -126,7 +128,7 @@ red = np.zeros(sub_img.shape)+[1,0,0]
 #st.image(red)
 mask = 0.5*(1 + mask)
 composite = sub_img * mask + red*(1- mask)
-st.image(composite)
+result.image(composite, width=250, caption=result_caption)
 # stack mask on top of image
 
 #st.image([mask])
