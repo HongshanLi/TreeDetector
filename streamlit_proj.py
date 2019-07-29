@@ -36,7 +36,7 @@ def load_image(filename):
     img = io.imread("sample_raw_data/037185-0_RGB-Ir.tif")
     large_image = img[:,:,0:3]
     small_image = Image.fromarray(large_image)
-    small_image.thumbnail((250, 250))
+    small_image.thumbnail((600, 600))
     small_image = np.array(small_image)
     return large_image, small_image
 
@@ -48,14 +48,15 @@ def init_clean_up():
 cleanup = CleanUp(threshold=0.5)
 
 img, thumbnail = load_image("sample_raw_data/037185-0_RGB-Ir.tif")
-#st.write(img.shape)
-#st.write(thumbnail.shape)
-st.image(img, width=600)
+st.write(img.shape)
+st.write(thumbnail.shape)
+#st.image(img, width=600)
+st.image(thumbnail)
 
 x = st.slider('X offset', 0, 0, 1000, 1)
 y = st.slider('Y offset', 0, 0, 1000, 1)
 
-sub_img = img[x:x+250, y:y+250, :]
+sub_img = thumbnail[y:y+250, x:x+250, :]
 
 
 model = ResNetModel(pretrained=False,use_lidar=False)
@@ -95,7 +96,19 @@ mask = mask.view(h,w)
 mask = mask.detach().cpu().numpy()
 
 mask = cleanup(mask)
-st.image([sub_img, mask])
+mask = np.array(mask)
+mask = mask[:, :, 0] / 255
+mask = np.array([mask, mask, mask]).transpose((1,2,0))
+
+sub_img = sub_img / 255
+red = np.zeros(sub_img.shape)+[1,0,0]
+#st.image(red)
+mask = 0.5*(1 + mask)
+composite = sub_img * mask + red*(1- mask)
+st.image(composite)
+# stack mask on top of image
+
+st.image([mask])
 #st.button(label="test")
 #x = st.slider(label="x coordinate of the crop center")
 #y = st.slider(label="y coordinate of the crop center")
