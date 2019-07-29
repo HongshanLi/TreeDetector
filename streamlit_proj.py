@@ -32,7 +32,7 @@ show_header(
     linkedin='https://www.linkedin.com/in/hongshanli/',
 )
 
-st.markdown("# Welcome to TreeDector")
+st.markdown("# Welcome to TreeDetector")
 
 
 st.write(
